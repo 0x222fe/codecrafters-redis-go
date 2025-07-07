@@ -10,12 +10,16 @@ type commandHandler func(args []string) ([]byte, error)
 const (
 	PING command = "PING"
 	ECHO command = "ECHO"
+	SET  command = "SET"
+	GET  command = "GET"
 )
 
 var (
 	commands = map[command]commandHandler{
 		PING: pingHandler,
 		ECHO: echoHandler,
+		SET:  setHandler,
+		GET:  getHandler,
 	}
 )
 
@@ -39,4 +43,26 @@ func echoHandler(args []string) ([]byte, error) {
 
 	response := "+" + args[0] + "\r\n"
 	return []byte(response), nil
+}
+
+func setHandler(args []string) ([]byte, error) {
+	if len(args) < 2 {
+		return nil, errors.New("SET requires at least two arguments")
+	}
+
+	store[args[0]] = args[1]
+	return []byte("+OK\r\n"), nil
+}
+
+func getHandler(args []string) ([]byte, error) {
+	if len(args) != 1 {
+		return nil, errors.New("GET requires exactly one argument")
+	}
+
+	value, exists := store[args[0]]
+	if !exists {
+		return []byte("$-1\r\n"), nil
+	}
+
+	return []byte(value), nil
 }
