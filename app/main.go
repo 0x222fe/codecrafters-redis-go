@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"io"
 	"net"
 	"os"
+
+	"github.com/codecrafters-io/redis-starter-go/internal/redis"
 )
 
 func main() {
@@ -30,16 +32,19 @@ func main() {
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
-	buf := make([]byte, 1024)
-	for {
-		_, err := conn.Read(buf)
-		if err != nil {
-			if err != io.EOF {
-				fmt.Println("Error reading from connection: ", err.Error())
-			}
-			break
-		}
+	reader := bufio.NewReader(conn)
 
-		conn.Write([]byte("+PONG\r\n"))
+	for {
+		cmd, args, err := redis.Parse(reader)
+		if err != nil {
+			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
+			continue
+		}
+		result, err := redis.RunCommand(cmd, args)
+		if err != nil {
+			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
+			continue
+		}
+		conn.Write(result)
 	}
 }

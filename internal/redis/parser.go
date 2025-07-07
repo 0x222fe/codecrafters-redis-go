@@ -9,16 +9,16 @@ import (
 )
 
 func Parse(reader *bufio.Reader) (string, []string, error) {
-	line, err := reader.ReadString('\n')
+	l, err := reader.ReadString('\n')
 	if err != nil {
 		return "", nil, err
 	}
 
-	if line[0] != '*' {
-		return "", nil, fmt.Errorf("invalid command format: expected array prefix '*', got %q", line[0])
+	if l[0] != '*' {
+		return "", nil, fmt.Errorf("invalid command format: expected array prefix '*', got %q", l[0])
 	}
 
-	numElements, err := strconv.Atoi(strings.TrimSpace(line[1:]))
+	numElements, err := strconv.Atoi(strings.TrimSpace(l[1:]))
 	if err != nil {
 		return "", nil, fmt.Errorf("invalid number of elements in command array: %w", err)
 	}
