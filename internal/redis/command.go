@@ -3,6 +3,8 @@ package redis
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 type command string
@@ -51,7 +53,20 @@ func setHandler(args []string) ([]byte, error) {
 		return nil, errors.New("SET requires at least two arguments")
 	}
 
-	setStore(args[0], args[1])
+	expMillis := int64(-1)
+	var err error
+
+	if len(args) > 2 {
+		switch strings.ToUpper(args[2]) {
+		case "PX":
+			expMillis, err = strconv.ParseInt(args[3], 10, 64)
+			if err != nil || expMillis < 0 {
+				return nil, fmt.Errorf("invalid expiration time: %w", err)
+			}
+		}
+	}
+
+	setStore(args[0], args[1], expMillis)
 	return []byte("+OK\r\n"), nil
 }
 
