@@ -2,6 +2,7 @@ package redis
 
 import (
 	"errors"
+	"fmt"
 )
 
 type command string
@@ -50,7 +51,7 @@ func setHandler(args []string) ([]byte, error) {
 		return nil, errors.New("SET requires at least two arguments")
 	}
 
-	store[args[0]] = args[1]
+	setStore(args[0], args[1])
 	return []byte("+OK\r\n"), nil
 }
 
@@ -59,10 +60,12 @@ func getHandler(args []string) ([]byte, error) {
 		return nil, errors.New("GET requires exactly one argument")
 	}
 
-	value, exists := store[args[0]]
+	value, exists := getStore(args[0])
 	if !exists {
 		return []byte("$-1\r\n"), nil
 	}
 
-	return []byte(value), nil
+	res := fmt.Sprintf("$%d\r\n%s\r\n", len(value), value)
+
+	return []byte(res), nil
 }
