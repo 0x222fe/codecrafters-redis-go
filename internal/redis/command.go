@@ -11,18 +11,20 @@ type command string
 type commandHandler func(args []string) ([]byte, error)
 
 const (
-	PING command = "PING"
-	ECHO command = "ECHO"
-	SET  command = "SET"
-	GET  command = "GET"
+	PING   command = "PING"
+	ECHO   command = "ECHO"
+	SET    command = "SET"
+	GET    command = "GET"
+	CONFIG command = "CONFIG"
 )
 
 var (
 	commands = map[command]commandHandler{
-		PING: pingHandler,
-		ECHO: echoHandler,
-		SET:  setHandler,
-		GET:  getHandler,
+		PING:   pingHandler,
+		ECHO:   echoHandler,
+		SET:    setHandler,
+		GET:    getHandler,
+		CONFIG: configHandler,
 	}
 )
 
@@ -83,4 +85,36 @@ func getHandler(args []string) ([]byte, error) {
 	res := fmt.Sprintf("$%d\r\n%s\r\n", len(value), value)
 
 	return []byte(res), nil
+}
+
+func configHandler(args []string) ([]byte, error) {
+	if len(args) < 2 {
+		return nil, errors.New("CONFIG requires at least two arguments")
+	}
+	cfgName := strings.ToLower(args[1])
+
+	switch strings.ToUpper(args[0]) {
+	case "GET":
+		val, err := getConfig(cfgName)
+		if err != nil {
+			return nil, err
+		}
+		return fmt.Appendf(nil,
+				"*2\r\n$%d\r\n%s\r\n$%d\r\n%s\r\n",
+				len(cfgName), cfgName, len(val), val),
+			nil
+	default:
+		return []byte("$-1\r\n"), nil
+	}
+}
+
+func getConfig(cfgName string) (string, error) {
+	switch cfgName {
+	case "dir":
+		return cfg.dir, nil
+	case "dbfilename":
+		return cfg.dbfilename, nil
+	default:
+		return "", fmt.Errorf("unknown configuration parameter: %s", cfgName)
+	}
 }
