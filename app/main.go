@@ -6,13 +6,15 @@ import (
 	"net"
 	"os"
 
-	"github.com/codecrafters-io/redis-starter-go/internal/redis"
+	"github.com/codecrafters-io/redis-starter-go/internal/command"
+	"github.com/codecrafters-io/redis-starter-go/internal/config"
+	"github.com/codecrafters-io/redis-starter-go/internal/parser"
 )
 
 func main() {
 	fmt.Println("Logs from your program will appear here!")
 
-	redis.ParseFlags()
+	config.ParseFlags()
 
 	l, err := net.Listen("tcp", "0.0.0.0:6379")
 	if err != nil {
@@ -37,12 +39,12 @@ func handleConnection(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 
 	for {
-		cmd, args, err := redis.Parse(reader)
+		cmd, args, err := parser.Parse(reader)
 		if err != nil {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue
 		}
-		result, err := redis.RunCommand(cmd, args)
+		result, err := command.RunCommand(cmd, args)
 		if err != nil {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue

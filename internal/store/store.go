@@ -1,4 +1,4 @@
-package redis
+package store
 
 import (
 	"sync"
@@ -15,7 +15,7 @@ var (
 	store = make(map[string]storeItem)
 )
 
-func getStore(key string) (string, bool) {
+func Get(key string) (string, bool) {
 	mu.RLock()
 	item, ok := store[key]
 	mu.RUnlock()
@@ -34,7 +34,7 @@ func getStore(key string) (string, bool) {
 	return item.val, true
 }
 
-func setStore(key string, val string, expMillis int64) {
+func Set(key string, val string, expMillis int64) {
 	var exp time.Time
 	if expMillis > 0 {
 		exp = time.Now().Add(time.Duration(expMillis) * time.Millisecond)
