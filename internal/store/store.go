@@ -48,3 +48,14 @@ func (store *Store) Set(key string, val string, expireAt *int64) {
 		expireAt: expireAt,
 	}
 }
+
+func (store *Store) Keys() []string {
+	store.mu.RLock()
+	defer store.mu.RUnlock()
+
+	keys := make([]string, 0, len(store.data))
+	for key := range store.data {
+		keys = append(keys, key)
+	}
+	return keys
+}

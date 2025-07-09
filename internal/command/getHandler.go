@@ -4,20 +4,24 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 	"github.com/codecrafters-io/redis-starter-go/internal/state"
 )
 
 func getHandler(state *state.AppState, args []string) ([]byte, error) {
 	if len(args) != 1 {
-		return nil, errors.New("GET requires exactly one argument")
+		return nil, errors.New("Usage: GET <key>")
 	}
 
 	value, exists := state.Store.Get(args[0])
 	if !exists {
-		return []byte("$-1\r\n"), nil
+		return resp.RESPNIL, nil
 	}
 
-	res := fmt.Sprintf("$%d\r\n%s\r\n", len(value), value)
+	result, err := resp.RESPEncode(value)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode value into RESP format: %w", err)
+	}
 
-	return []byte(res), nil
+	return result, nil
 }

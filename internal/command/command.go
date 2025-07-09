@@ -15,6 +15,7 @@ const (
 	SET    command = "SET"
 	GET    command = "GET"
 	CONFIG command = "CONFIG"
+	KEYS   command = "KEYS"
 )
 
 var (
@@ -24,6 +25,7 @@ var (
 		SET:    setHandler,
 		GET:    getHandler,
 		CONFIG: configHandler,
+		KEYS:   keysHandler,
 	}
 )
 

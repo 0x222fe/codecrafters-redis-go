@@ -27,7 +27,7 @@ func main() {
 		r, err = rdb.ReadRDBFile(filename)
 		if err != nil {
 			fmt.Printf("Failed to read RDB file: %s\n", err.Error())
-			os.Exit(1)
+			r = nil
 		}
 	}
 

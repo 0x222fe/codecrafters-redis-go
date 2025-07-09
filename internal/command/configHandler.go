@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 	"github.com/codecrafters-io/redis-starter-go/internal/state"
 )
 
@@ -20,12 +21,15 @@ func configHandler(state *state.AppState, args []string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		return fmt.Appendf(nil,
-				"*2\r\n$%d\r\n%s\r\n$%d\r\n%s\r\n",
-				len(cfgName), cfgName, len(val), val),
-			nil
+
+		result, err := resp.RESPEncode([]string{cfgName, val})
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode into RESP format: %w", err)
+		}
+
+		return result, nil
 	default:
-		return []byte("$-1\r\n"), nil
+		return resp.RESPNIL, nil
 	}
 }
 
