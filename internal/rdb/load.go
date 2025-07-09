@@ -191,7 +191,7 @@ func parseKeyValue(reader *bufio.Reader, db *database, hashSize, expirySize int)
 
 		hashSize--
 
-		expiryAt := new(int64)
+		var expiryAt *int64
 
 		if flag[0] == msExpFlag || flag[0] == sExpFlag {
 			expCount++
@@ -211,11 +211,17 @@ func parseKeyValue(reader *bufio.Reader, db *database, hashSize, expirySize int)
 				return err
 			}
 
+			expAt := int64(0)
 			if size == 4 {
-				*expiryAt = int64(binary.LittleEndian.Uint32(bytes))
+				expAt = int64(binary.LittleEndian.Uint32(bytes))
 			} else {
-				*expiryAt = int64(binary.LittleEndian.Uint64(bytes))
+				expAt = int64(binary.LittleEndian.Uint64(bytes))
 			}
+
+			if expAt < 0 {
+				return fmt.Errorf("invalid expiry time: %d", expAt)
+			}
+			expiryAt = &expAt
 		}
 
 		typeByte, err := reader.ReadByte()
