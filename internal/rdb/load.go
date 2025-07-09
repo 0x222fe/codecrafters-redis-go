@@ -22,8 +22,8 @@ func ReadRDBFile(filename string) (*RDB, error) {
 	reader := bufio.NewReader(file)
 
 	rdb := &RDB{
-		Metadata:  make(map[string]string),
-		Databases: make(map[int]*Database),
+		metadata:  make(map[string]string),
+		databases: make(map[int]*database),
 	}
 
 	if err := parseHeader(reader, rdb); err != nil {
@@ -79,7 +79,7 @@ func parseHeader(reader *bufio.Reader, rdb *RDB) error {
 		return errors.New("invalid RDB file: missing REDIS signature")
 	}
 
-	rdb.Version = string(header[5:9])
+	rdb.version = string(header[5:9])
 	return nil
 }
 
@@ -106,7 +106,7 @@ func parseMeta(reader *bufio.Reader, rdb *RDB) error {
 		if err != nil {
 			return err
 		}
-		rdb.Metadata[name] = val
+		rdb.metadata[name] = val
 	}
 }
 
@@ -134,7 +134,7 @@ func parseDatabase(reader *bufio.Reader, rdb *RDB) error {
 			return err
 		}
 
-		_, has := rdb.Databases[idx]
+		_, has := rdb.databases[idx]
 		if has {
 			return fmt.Errorf("database with index %d already exists", idx)
 		}
@@ -165,13 +165,13 @@ func parseDatabase(reader *bufio.Reader, rdb *RDB) error {
 			return err
 		}
 
-		db := &Database{
-			Index:               idx,
-			HashTableSize:       hashSize,
-			ExpiryHashTableSize: expirySize,
-			Items:               make(map[string]*KeyValue),
+		db := &database{
+			index:               idx,
+			hashTableSize:       hashSize,
+			expiryHashTableSize: expirySize,
+			items:               make(map[string]*keyValue),
 		}
-		rdb.Databases[idx] = db
+		rdb.databases[idx] = db
 
 		err = parseKeyValue(reader, db, hashSize, expirySize)
 		if err != nil {
@@ -180,7 +180,7 @@ func parseDatabase(reader *bufio.Reader, rdb *RDB) error {
 	}
 }
 
-func parseKeyValue(reader *bufio.Reader, db *Database, hashSize, expirySize int) error {
+func parseKeyValue(reader *bufio.Reader, db *database, hashSize, expirySize int) error {
 
 	expCount := 0
 	for range hashSize {
@@ -231,14 +231,14 @@ func parseKeyValue(reader *bufio.Reader, db *Database, hashSize, expirySize int)
 		if err != nil {
 			return err
 		}
-		kv := &KeyValue{
-			Key:      key,
-			Value:    val,
-			Type:     typeByte,
-			ExpireAt: expiryAt,
+		kv := &keyValue{
+			key:       key,
+			value:     val,
+			valueType: typeByte,
+			expireAt:  expiryAt,
 		}
 
-		db.Items[key] = kv
+		db.items[key] = kv
 	}
 
 	if expCount != expirySize {

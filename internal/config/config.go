@@ -7,12 +7,12 @@ type Config struct {
 	Dbfilename string
 }
 
-var (
-	Cfg Config
-)
+func ParseFlags() *Config {
+	cfg := &Config{}
 
-func ParseFlags() {
-	flag.StringVar(&Cfg.Dir, "dir", "", "Directory to store Redis data")
-	flag.StringVar(&Cfg.Dbfilename, "dbfilename", "", "Name of the Redis database file")
+	flag.StringVar(&cfg.Dir, "dir", "", "Directory to store Redis data")
+	flag.StringVar(&cfg.Dbfilename, "dbfilename", "", "Name of the Redis database file")
 	flag.Parse()
+
+	return cfg
 }

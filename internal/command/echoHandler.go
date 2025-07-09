@@ -1,8 +1,12 @@
 package command
 
-import "errors"
+import (
+	"errors"
 
-func echoHandler(args []string) ([]byte, error) {
+	"github.com/codecrafters-io/redis-starter-go/internal/state"
+)
+
+func echoHandler(state *state.AppState, args []string) ([]byte, error) {
 	if len(args) == 0 {
 		return nil, errors.New("ECHO requires at least one argument")
 	}

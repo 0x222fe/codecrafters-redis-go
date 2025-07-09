@@ -2,10 +2,12 @@ package command
 
 import (
 	"errors"
+
+	"github.com/codecrafters-io/redis-starter-go/internal/state"
 )
 
 type command string
-type commandHandler func(args []string) ([]byte, error)
+type commandHandler func(state *state.AppState, args []string) ([]byte, error)
 
 const (
 	PING   command = "PING"
@@ -25,12 +27,11 @@ var (
 	}
 )
 
-func RunCommand(cmd string, args []string) ([]byte, error) {
+func RunCommand(state *state.AppState, cmd string, args []string) ([]byte, error) {
 	handler, exists := commands[command(cmd)]
 	if !exists {
 		return nil, errors.New("unknown command: " + cmd)
 	}
 
-	return handler(args)
+	return handler(state, args)
 }
-

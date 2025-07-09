@@ -5,16 +5,38 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/command"
 	"github.com/codecrafters-io/redis-starter-go/internal/config"
 	"github.com/codecrafters-io/redis-starter-go/internal/parser"
+	"github.com/codecrafters-io/redis-starter-go/internal/rdb"
+	"github.com/codecrafters-io/redis-starter-go/internal/state"
 )
 
 func main() {
 	fmt.Println("Logs from your program will appear here!")
 
-	config.ParseFlags()
+	cfg := config.ParseFlags()
+
+	var r *rdb.RDB
+	var err error
+
+	filename := filepath.Join(cfg.Dir, cfg.Dbfilename)
+	if filename != "" {
+		r, err = rdb.ReadRDBFile(filename)
+		if err != nil {
+			fmt.Printf("Failed to read RDB file: %s\n", err.Error())
+			os.Exit(1)
+		}
+	}
+
+	store := r.MapToStore()
+
+	state := &state.AppState{
+		Cfg:   cfg,
+		Store: store,
+	}
 
 	l, err := net.Listen("tcp", "0.0.0.0:6379")
 	if err != nil {
@@ -30,11 +52,11 @@ func main() {
 			continue
 		}
 
-		go handleConnection(conn)
+		go handleConnection(conn, state)
 	}
 }
 
-func handleConnection(conn net.Conn) {
+func handleConnection(conn net.Conn, state *state.AppState) {
 	defer conn.Close()
 	reader := bufio.NewReader(conn)
 
@@ -44,7 +66,7 @@ func handleConnection(conn net.Conn) {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue
 		}
-		result, err := command.RunCommand(cmd, args)
+		result, err := command.RunCommand(state, cmd, args)
 		if err != nil {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue

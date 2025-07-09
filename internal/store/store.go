@@ -5,45 +5,46 @@ import (
 	"time"
 )
 
-type storeItem struct {
-	val string
-	exp time.Time
+type Store struct {
+	mu   sync.RWMutex
+	data map[string]storeItem
 }
 
-var (
-	mu    = &sync.RWMutex{}
-	store = make(map[string]storeItem)
-)
+func NewStore() *Store {
+	return &Store{
+		data: make(map[string]storeItem),
+	}
+}
 
-func Get(key string) (string, bool) {
-	mu.RLock()
-	item, ok := store[key]
-	mu.RUnlock()
+type storeItem struct {
+	val      string
+	expireAt *int64
+}
+
+func (store *Store) Get(key string) (string, bool) {
+	store.mu.RLock()
+	item, ok := store.data[key]
+	store.mu.RUnlock()
 
 	if !ok {
 		return "", false
 	}
 
-	if !item.exp.IsZero() && time.Now().After(item.exp) {
-		mu.Lock()
-		delete(store, key)
-		mu.Unlock()
+	if item.expireAt != nil && *item.expireAt < time.Now().UnixMilli() {
+		store.mu.Lock()
+		delete(store.data, key)
+		store.mu.Unlock()
 		return "", false
 	}
 
 	return item.val, true
 }
 
-func Set(key string, val string, expMillis int64) {
-	var exp time.Time
-	if expMillis > 0 {
-		exp = time.Now().Add(time.Duration(expMillis) * time.Millisecond)
-	}
-
-	mu.Lock()
-	defer mu.Unlock()
-	store[key] = storeItem{
-		val: val,
-		exp: exp,
+func (store *Store) Set(key string, val string, expireAt *int64) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	store.data[key] = storeItem{
+		val:      val,
+		expireAt: expireAt,
 	}
 }

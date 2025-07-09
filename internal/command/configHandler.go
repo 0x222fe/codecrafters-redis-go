@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/codecrafters-io/redis-starter-go/internal/config"
+	"github.com/codecrafters-io/redis-starter-go/internal/state"
 )
 
-func configHandler(args []string) ([]byte, error) {
+func configHandler(state *state.AppState, args []string) ([]byte, error) {
 	if len(args) < 2 {
 		return nil, errors.New("CONFIG requires at least two arguments")
 	}
@@ -16,7 +16,7 @@ func configHandler(args []string) ([]byte, error) {
 
 	switch strings.ToUpper(args[0]) {
 	case "GET":
-		val, err := getConfig(cfgName)
+		val, err := getConfig(state, cfgName)
 		if err != nil {
 			return nil, err
 		}
@@ -29,12 +29,12 @@ func configHandler(args []string) ([]byte, error) {
 	}
 }
 
-func getConfig(cfgName string) (string, error) {
+func getConfig(state *state.AppState, cfgName string) (string, error) {
 	switch cfgName {
 	case "dir":
-		return config.Cfg.Dir, nil
+		return state.Cfg.Dir, nil
 	case "dbfilename":
-		return config.Cfg.Dbfilename, nil
+		return state.Cfg.Dbfilename, nil
 	default:
 		return "", fmt.Errorf("unknown configuration parameter: %s", cfgName)
 	}

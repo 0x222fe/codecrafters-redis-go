@@ -1,23 +1,27 @@
 package rdb
 
+import (
+	"github.com/codecrafters-io/redis-starter-go/internal/store"
+)
+
 type RDB struct {
-	Version   string
-	Metadata  map[string]string
-	Databases map[int]*Database
+	version   string
+	metadata  map[string]string
+	databases map[int]*database
 }
 
-type Database struct {
-	Index               int
-	HashTableSize       int
-	ExpiryHashTableSize int
-	Items               map[string]*KeyValue
+type database struct {
+	index               int
+	hashTableSize       int
+	expiryHashTableSize int
+	items               map[string]*keyValue
 }
 
-type KeyValue struct {
-	Key      string
-	Value    string
-	Type     byte
-	ExpireAt *int64
+type keyValue struct {
+	key       string
+	value     string
+	valueType byte
+	expireAt  *int64
 }
 
 const (
@@ -28,3 +32,17 @@ const (
 	dbFlag    = 0xFE
 	endFlag   = 0xFF
 )
+
+func (rdb *RDB) MapToStore() *store.Store {
+	s := store.NewStore()
+	if rdb == nil {
+		return s
+	}
+
+	for _, db := range rdb.databases {
+		for _, kv := range db.items {
+			s.Set(kv.key, kv.value, kv.expireAt)
+		}
+	}
+	return s
+}
