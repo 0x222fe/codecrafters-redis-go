@@ -16,6 +16,7 @@ const (
 	GET    command = "GET"
 	CONFIG command = "CONFIG"
 	KEYS   command = "KEYS"
+	INFO   command = "INFO"
 )
 
 var (
@@ -26,6 +27,7 @@ var (
 		GET:    getHandler,
 		CONFIG: configHandler,
 		KEYS:   keysHandler,
+		INFO:   infoHandler,
 	}
 )
 

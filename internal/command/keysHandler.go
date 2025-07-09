@@ -9,7 +9,7 @@ import (
 )
 
 func keysHandler(state *state.AppState, args []string) ([]byte, error) {
-	if len(args) < 1 {
+	if len(args) == 0 {
 		return nil, errors.New("keys requires at least one argument")
 	}
 
