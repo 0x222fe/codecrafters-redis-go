@@ -16,7 +16,15 @@ func infoHandler(state *state.AppState, args []string) ([]byte, error) {
 		return nil, errors.New("only 'replication' section is supported")
 	}
 
-	info := "role:master\r\n"
+	var role string
+	if state.Cfg.ReplicaHost != "" && state.Cfg.ReplicaPort != 0 {
+		role = "slave"
+	} else {
+		role = "master"
+	}
+
+	info := "# Replication\r\n" +
+		"role:" + role + "\r\n"
 
 	result := fmt.Sprintf("$%d\r\n%s\r\n", len(info), info)
 

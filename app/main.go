@@ -18,10 +18,13 @@ import (
 func main() {
 	fmt.Println("Logs from your program will appear here!")
 
-	cfg := config.ParseFlags()
+	cfg, err := config.ParseFlags()
+	if err != nil {
+		fmt.Printf("Failed to parse flags: %s\n", err.Error())
+		os.Exit(1)
+	}
 
 	var r *rdb.RDB
-	var err error
 
 	filename := filepath.Join(cfg.Dir, cfg.Dbfilename)
 	if filename != "" {
