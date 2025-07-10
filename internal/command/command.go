@@ -9,7 +9,17 @@ import (
 )
 
 type command string
+type commandType int
+type commandSpec struct {
+	handler commandHandler
+	cmdType commandType
+}
 type commandHandler func(state *state.AppState, args []string, writer io.Writer) error
+
+const (
+	cmdTypeRead commandType = iota
+	cmdTypeWrite
+)
 
 const (
 	PING     command = "PING"
@@ -24,26 +34,35 @@ const (
 )
 
 var (
-	commands = map[command]commandHandler{
-		PING:     pingHandler,
-		ECHO:     echoHandler,
-		SET:      setHandler,
-		GET:      getHandler,
-		CONFIG:   configHandler,
-		KEYS:     keysHandler,
-		INFO:     infoHandler,
-		REPLCONF: replconfHandler,
-		PSYNC:    psyncHandler,
+	commands = map[command]commandSpec{
+		PING:     {pingHandler, cmdTypeRead},
+		ECHO:     {echoHandler, cmdTypeRead},
+		SET:      {setHandler, cmdTypeWrite},
+		GET:      {getHandler, cmdTypeRead},
+		CONFIG:   {configHandler, cmdTypeRead},
+		KEYS:     {keysHandler, cmdTypeRead},
+		INFO:     {infoHandler, cmdTypeRead},
+		REPLCONF: {replconfHandler, cmdTypeRead},
+		PSYNC:    {psyncHandler, cmdTypeRead},
 	}
 )
 
-func RunCommand(state *state.AppState, cmd string, args []string, writer io.Writer) error {
-	handler, exists := commands[command(cmd)]
+func RunCommand(appState *state.AppState, cmd string, args []string, writer io.Writer) error {
+	spec, exists := commands[command(cmd)]
 	if !exists {
 		return errors.New("unknown command: " + cmd)
 	}
 
-	return handler(state, args, writer)
+	var isReplica bool
+	appState.ReadState(func(s state.State) {
+		isReplica = s.IsReplica
+	})
+
+	if spec.cmdType == cmdTypeWrite && isReplica {
+		return errors.New("replica cannot execute write commands")
+	}
+
+	return spec.handler(appState, args, writer)
 }
 
 func writeResponse(writer io.Writer, response []byte) error {
