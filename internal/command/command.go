@@ -10,24 +10,26 @@ type command string
 type commandHandler func(state *state.AppState, args []string) ([]byte, error)
 
 const (
-	PING   command = "PING"
-	ECHO   command = "ECHO"
-	SET    command = "SET"
-	GET    command = "GET"
-	CONFIG command = "CONFIG"
-	KEYS   command = "KEYS"
-	INFO   command = "INFO"
+	PING     command = "PING"
+	ECHO     command = "ECHO"
+	SET      command = "SET"
+	GET      command = "GET"
+	CONFIG   command = "CONFIG"
+	KEYS     command = "KEYS"
+	INFO     command = "INFO"
+	REPLCONF command = "REPLCONF"
 )
 
 var (
 	commands = map[command]commandHandler{
-		PING:   pingHandler,
-		ECHO:   echoHandler,
-		SET:    setHandler,
-		GET:    getHandler,
-		CONFIG: configHandler,
-		KEYS:   keysHandler,
-		INFO:   infoHandler,
+		PING:     pingHandler,
+		ECHO:     echoHandler,
+		SET:      setHandler,
+		GET:      getHandler,
+		CONFIG:   configHandler,
+		KEYS:     keysHandler,
+		INFO:     infoHandler,
+		REPLCONF: replconfHandler,
 	}
 )
 
