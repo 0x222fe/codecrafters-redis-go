@@ -73,15 +73,47 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 		if err != nil {
 			return nil, errors.New("failed to connect to master server: " + err.Error())
 		}
+		defer conn.Close()
 
-		bytes, err := resp.RESPEncode([]string{"PING"})
+		pingEncoded, err := resp.RESPEncode([]string{"PING"})
 		if err != nil {
 			return nil, errors.New("failed to encode PING command: " + err.Error())
 		}
-		_, err = conn.Write(bytes)
+		_, err = conn.Write(pingEncoded)
 		if err != nil {
 			return nil, errors.New("failed to send PING command: " + err.Error())
 		}
+
+		reader := bufio.NewReader(conn)
+
+		res, err := reader.ReadString('\n')
+		if err != nil {
+			return nil, errors.New("failed to read response from master server: " + err.Error())
+		}
+		if res != "+PONG\r\n" {
+			return nil, errors.New("unexpected response from master server: " + res)
+		}
+
+		replconfEncoded, err := resp.RESPEncode([]string{"REPLCONF", "listening-port", strconv.Itoa(cfg.Port)})
+		if err != nil {
+			return nil, errors.New("failed to encode REPLCONF command: " + err.Error())
+		}
+		_, err = conn.Write(replconfEncoded)
+		if err != nil {
+			return nil, errors.New("failed to send REPLCONF command: " + err.Error())
+		}
+
+		replconfEncoded, err = resp.RESPEncode([]string{"REPLCONF", "capa", "psync2"})
+		if err != nil {
+			return nil, errors.New("failed to encode REPLCONF capa command: " + err.Error())
+		}
+		_, err = conn.Write(replconfEncoded)
+		if err != nil {
+			return nil, errors.New("failed to send REPLCONF capa command: " + err.Error())
+		}
+
+		res, err = reader.ReadString('\n')
+
 	}
 
 	state := &state.AppState{
