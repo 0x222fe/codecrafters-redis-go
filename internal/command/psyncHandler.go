@@ -18,7 +18,7 @@ func psyncHandler(state *state.AppState, args []string, writer io.Writer) error 
 		return errors.New("PSYNC only supports ? -1 for now")
 	}
 
-	psyncMsg := "+FULLRESYNC " + state.ReplicantionID + " " + "0" + "\r\n"
+	psyncMsg := "+FULLRESYNC " + state.ReplicationID + " " + "0" + "\r\n"
 
 	err := writeResponse(writer, []byte(psyncMsg))
 	if err != nil {

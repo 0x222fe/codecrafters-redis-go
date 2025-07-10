@@ -6,9 +6,9 @@ import (
 )
 
 type AppState struct {
-	Cfg                *config.Config
-	Store              *store.Store
-	IsReplica          bool
-	ReplicantionID     string
-	ReplicantionOffset int
+	Cfg               *config.Config
+	Store             *store.Store
+	IsReplica         bool
+	ReplicationID     string
+	ReplicationOffset int
 }

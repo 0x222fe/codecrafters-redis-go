@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -148,8 +149,8 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 	}
 
 	//INFO: hardcoded for now
-	state.ReplicantionID = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
-	state.ReplicantionOffset = 0
+	state.ReplicationID = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
+	state.ReplicationOffset = 0
 
 	return state, nil
 }

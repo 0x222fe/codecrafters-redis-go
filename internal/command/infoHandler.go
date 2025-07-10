@@ -28,8 +28,8 @@ func infoHandler(state *state.AppState, args []string, writer io.Writer) error {
 	info := "# Replication\r\n" +
 		"role:" + role + "\r\n"
 	if !state.IsReplica {
-		info += "master_replid:" + state.ReplicantionID + "\r\n" +
-			"master_repl_offset:" + strconv.Itoa(state.ReplicantionOffset) + "\r\n"
+		info += "master_replid:" + state.ReplicationID + "\r\n" +
+			"master_repl_offset:" + strconv.Itoa(state.ReplicationOffset) + "\r\n"
 	}
 
 	result := fmt.Sprintf("$%d\r\n%s\r\n", len(info), info)
