@@ -161,6 +161,11 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 	for {
 		cmd, args, err := parser.Parse(reader)
 		if err != nil {
+			if err == io.EOF {
+				fmt.Println("Client disconnected")
+				return
+			}
+
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue
 		}
