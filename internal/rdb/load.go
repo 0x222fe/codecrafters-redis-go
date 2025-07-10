@@ -9,7 +9,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/codecrafters-io/redis-starter-go/pkg/crc64"
+	"github.com/0x222fe/codecrafters-redis-go/pkg/crc64"
 )
 
 func ReadRDBFile(filename string) (*RDB, error) {

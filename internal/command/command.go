@@ -3,7 +3,7 @@ package command
 import (
 	"errors"
 
-	"github.com/codecrafters-io/redis-starter-go/internal/state"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
 type command string

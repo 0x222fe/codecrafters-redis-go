@@ -9,12 +9,12 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/codecrafters-io/redis-starter-go/internal/command"
-	"github.com/codecrafters-io/redis-starter-go/internal/config"
-	"github.com/codecrafters-io/redis-starter-go/internal/parser"
-	"github.com/codecrafters-io/redis-starter-go/internal/rdb"
-	"github.com/codecrafters-io/redis-starter-go/internal/resp"
-	"github.com/codecrafters-io/redis-starter-go/internal/state"
+	"github.com/0x222fe/codecrafters-redis-go/internal/command"
+	"github.com/0x222fe/codecrafters-redis-go/internal/config"
+	"github.com/0x222fe/codecrafters-redis-go/internal/parser"
+	"github.com/0x222fe/codecrafters-redis-go/internal/rdb"
+	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
 func main() {

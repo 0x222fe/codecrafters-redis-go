@@ -1,7 +1,7 @@
 package rdb
 
 import (
-	"github.com/codecrafters-io/redis-starter-go/internal/store"
+	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 )
 
 type RDB struct {

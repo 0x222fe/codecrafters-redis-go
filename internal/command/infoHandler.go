@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/codecrafters-io/redis-starter-go/internal/state"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
 func infoHandler(state *state.AppState, args []string) ([]byte, error) {

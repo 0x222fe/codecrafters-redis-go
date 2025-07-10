@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/codecrafters-io/redis-starter-go/internal/resp"
-	"github.com/codecrafters-io/redis-starter-go/internal/state"
+	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
 func keysHandler(state *state.AppState, args []string) ([]byte, error) {
