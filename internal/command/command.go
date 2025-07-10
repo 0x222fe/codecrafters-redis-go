@@ -18,6 +18,7 @@ const (
 	KEYS     command = "KEYS"
 	INFO     command = "INFO"
 	REPLCONF command = "REPLCONF"
+	PSYNC    command = "PSYNC"
 )
 
 var (
@@ -30,6 +31,7 @@ var (
 		KEYS:     keysHandler,
 		INFO:     infoHandler,
 		REPLCONF: replconfHandler,
+		PSYNC:    psyncHandler,
 	}
 )
 
