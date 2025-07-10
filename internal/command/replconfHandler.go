@@ -1,9 +1,13 @@
 package command
 
-import "github.com/0x222fe/codecrafters-redis-go/internal/state"
+import (
+	"io"
 
-func replconfHandler(state *state.AppState, args []string) ([]byte, error) {
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
+)
+
+func replconfHandler(state *state.AppState, args []string, writer io.Writer) error {
 	//INFO: ignore args for now
 
-	return []byte("+OK\r\n"), nil
+	return writeResponse(writer, []byte("+OK\r\n"))
 }

@@ -2,12 +2,14 @@ package command
 
 import (
 	"errors"
+	"fmt"
+	"io"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
 type command string
-type commandHandler func(state *state.AppState, args []string) ([]byte, error)
+type commandHandler func(state *state.AppState, args []string, writer io.Writer) error
 
 const (
 	PING     command = "PING"
@@ -35,11 +37,19 @@ var (
 	}
 )
 
-func RunCommand(state *state.AppState, cmd string, args []string) ([]byte, error) {
+func RunCommand(state *state.AppState, cmd string, args []string, writer io.Writer) error {
 	handler, exists := commands[command(cmd)]
 	if !exists {
-		return nil, errors.New("unknown command: " + cmd)
+		return errors.New("unknown command: " + cmd)
 	}
 
-	return handler(state, args)
+	return handler(state, args, writer)
+}
+
+func writeResponse(writer io.Writer, response []byte) error {
+	_, err := writer.Write(response)
+	if err != nil {
+		return fmt.Errorf("failed to write response: %w", err)
+	}
+	return nil
 }

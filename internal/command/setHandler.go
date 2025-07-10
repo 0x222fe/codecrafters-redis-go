@@ -3,6 +3,7 @@ package command
 import (
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -10,9 +11,9 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
-func setHandler(state *state.AppState, args []string) ([]byte, error) {
+func setHandler(state *state.AppState, args []string, writer io.Writer) error {
 	if len(args) < 2 {
-		return nil, errors.New("SET requires at least two arguments")
+		return errors.New("SET requires at least two arguments")
 	}
 
 	var expMillis int64
@@ -23,12 +24,12 @@ func setHandler(state *state.AppState, args []string) ([]byte, error) {
 		case "PX":
 			expMillis, err = strconv.ParseInt(args[3], 10, 64)
 			if err != nil || expMillis < 0 {
-				return nil, fmt.Errorf("invalid expiration time: %w", err)
+				return fmt.Errorf("invalid expiration time: %w", err)
 			}
 		case "EX":
 			expSeconds, err := strconv.ParseInt(args[3], 10, 64)
 			if err != nil || expSeconds < 0 {
-				return nil, fmt.Errorf("invalid expiration time: %w", err)
+				return fmt.Errorf("invalid expiration time: %w", err)
 			}
 			expMillis = expSeconds * 1000
 		}
@@ -39,5 +40,6 @@ func setHandler(state *state.AppState, args []string) ([]byte, error) {
 		*expireAt = time.Now().Add(time.Duration(expMillis) * time.Millisecond).UnixMilli()
 	}
 	state.Store.Set(args[0], args[1], expireAt)
-	return []byte("+OK\r\n"), nil
+
+	return writeResponse(writer, []byte("+OK\r\n"))
 }

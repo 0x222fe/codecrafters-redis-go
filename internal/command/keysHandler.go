@@ -3,25 +3,26 @@ package command
 import (
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
-func keysHandler(state *state.AppState, args []string) ([]byte, error) {
+func keysHandler(state *state.AppState, args []string, writer io.Writer) error {
 	if len(args) == 0 {
-		return nil, errors.New("keys requires at least one argument")
+		return errors.New("keys requires at least one argument")
 	}
 
 	if args[0] != "*" {
-		return nil, errors.New("only wildcard '*' is supported")
+		return errors.New("only wildcard '*' is supported")
 	}
 	keys := state.Store.Keys()
 
 	result, err := resp.RESPEncode(keys)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encode keys into RESP format: %w", err)
+		return fmt.Errorf("failed to encode keys into RESP format: %w", err)
 	}
 
-	return result, nil
+	return writeResponse(writer, result)
 }

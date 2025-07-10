@@ -164,11 +164,10 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue
 		}
-		result, err := command.RunCommand(state, cmd, args)
+		err = command.RunCommand(state, cmd, args, conn)
 		if err != nil {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue
 		}
-		conn.Write(result)
 	}
 }
