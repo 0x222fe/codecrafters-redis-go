@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/internal/config"
 	"github.com/codecrafters-io/redis-starter-go/internal/parser"
 	"github.com/codecrafters-io/redis-starter-go/internal/rdb"
+	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 	"github.com/codecrafters-io/redis-starter-go/internal/state"
 )
 
@@ -63,7 +65,24 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 
 	store := r.MapToStore()
 
-	isReplica := cfg.ReplicaHost != "" && cfg.ReplicaPort != 0
+	isReplica := cfg.MasterHost != "" && cfg.MasterPort != 0
+
+	if isReplica {
+		replicaAddr := net.JoinHostPort(cfg.MasterHost, strconv.Itoa(cfg.MasterPort))
+		conn, err := net.Dial("tcp", replicaAddr)
+		if err != nil {
+			return nil, errors.New("failed to connect to master server: " + err.Error())
+		}
+
+		bytes, err := resp.RESPEncode([]string{"PING"})
+		if err != nil {
+			return nil, errors.New("failed to encode PING command: " + err.Error())
+		}
+		_, err = conn.Write(bytes)
+		if err != nil {
+			return nil, errors.New("failed to send PING command: " + err.Error())
+		}
+	}
 
 	state := &state.AppState{
 		Cfg:       cfg,
@@ -71,11 +90,9 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 		IsReplica: isReplica,
 	}
 
-	if !isReplica {
-		//INFO: hardcoded for now
-		state.ReplicantionID = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
-		state.ReplicantionOffset = 0
-	}
+	//INFO: hardcoded for now
+	state.ReplicantionID = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
+	state.ReplicantionOffset = 0
 
 	return state, nil
 }

@@ -8,11 +8,11 @@ import (
 )
 
 type Config struct {
-	Dir         string
-	Dbfilename  string
-	Port        int
-	ReplicaHost string
-	ReplicaPort int
+	Dir        string
+	Dbfilename string
+	Port       int
+	MasterHost string
+	MasterPort int
 }
 
 func ParseFlags() (*Config, error) {
@@ -31,12 +31,12 @@ func ParseFlags() (*Config, error) {
 		if len(parts) != 2 {
 			return nil, errors.New("replicaof must be in the format <host> <port>")
 		}
-		cfg.ReplicaHost = parts[0]
+		cfg.MasterHost = parts[0]
 		port, err := strconv.Atoi(parts[1])
 		if err != nil {
 			return nil, errors.New("replicaof port must be a valid integer")
 		}
-		cfg.ReplicaPort = port
+		cfg.MasterPort = port
 	}
 
 	return cfg, nil
