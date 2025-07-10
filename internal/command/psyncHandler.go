@@ -9,7 +9,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
-func psyncHandler(state *state.AppState, args []string, writer io.Writer) error {
+func psyncHandler(appState *state.AppState, args []string, writer io.Writer) error {
 	if len(args) < 2 {
 		return errors.New("PSYNC requires at least 2 arguments")
 	}
@@ -18,7 +18,13 @@ func psyncHandler(state *state.AppState, args []string, writer io.Writer) error 
 		return errors.New("PSYNC only supports ? -1 for now")
 	}
 
-	psyncMsg := "+FULLRESYNC " + state.ReplicationID + " " + "0" + "\r\n"
+	var replicationID string
+
+	appState.ReadState(func(s state.State) {
+		replicationID = s.ReplicationID
+	})
+
+	psyncMsg := "+FULLRESYNC " + replicationID + " " + "0" + "\r\n"
 
 	err := writeResponse(writer, []byte(psyncMsg))
 	if err != nil {

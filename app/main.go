@@ -142,21 +142,24 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 		res, err = reader.ReadString('\n')
 	}
 
-	state := &state.AppState{
-		Cfg:       cfg,
-		Store:     store,
-		IsReplica: isReplica,
-	}
+	state := state.NewAppState(
+		&state.State{
 
-	//INFO: hardcoded for now
-	state.ReplicationID = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
-	state.ReplicationOffset = 0
+			IsReplica: isReplica,
+			//INFO: hardcoded for now
+			ReplicationID:     "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb",
+			ReplicationOffset: 0,
+		}, cfg, store)
 
 	return state, nil
 }
 
 func handleConnection(conn net.Conn, state *state.AppState) {
 	defer conn.Close()
+	defer func() {
+
+	}()
+
 	reader := bufio.NewReader(conn)
 
 	for {

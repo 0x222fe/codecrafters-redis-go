@@ -17,7 +17,8 @@ func keysHandler(state *state.AppState, args []string, writer io.Writer) error {
 	if args[0] != "*" {
 		return errors.New("only wildcard '*' is supported")
 	}
-	keys := state.Store.Keys()
+
+	keys := state.GetStore().Keys()
 
 	result, err := resp.RESPEncode(keys)
 	if err != nil {

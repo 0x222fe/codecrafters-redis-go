@@ -11,7 +11,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
-func setHandler(state *state.AppState, args []string, writer io.Writer) error {
+func setHandler(appState *state.AppState, args []string, writer io.Writer) error {
 	if len(args) < 2 {
 		return errors.New("SET requires at least two arguments")
 	}
@@ -34,12 +34,14 @@ func setHandler(state *state.AppState, args []string, writer io.Writer) error {
 			expMillis = expSeconds * 1000
 		}
 	}
+
 	var expireAt *int64
 	if expMillis > 0 {
 		expireAt = new(int64)
 		*expireAt = time.Now().Add(time.Duration(expMillis) * time.Millisecond).UnixMilli()
 	}
-	state.Store.Set(args[0], args[1], expireAt)
+
+	appState.GetStore().Set(args[0], args[1], expireAt)
 
 	return writeResponse(writer, []byte("+OK\r\n"))
 }

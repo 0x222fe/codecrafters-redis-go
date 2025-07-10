@@ -38,12 +38,13 @@ func configHandler(state *state.AppState, args []string, writer io.Writer) error
 	return writeResponse(writer, bytes)
 }
 
-func getConfig(state *state.AppState, cfgName string) (string, error) {
+func getConfig(appState *state.AppState, cfgName string) (string, error) {
+	cfg := appState.ReadCfg()
 	switch cfgName {
 	case "dir":
-		return state.Cfg.Dir, nil
+		return cfg.Dir, nil
 	case "dbfilename":
-		return state.Cfg.Dbfilename, nil
+		return cfg.Dbfilename, nil
 	default:
 		return "", fmt.Errorf("unknown configuration parameter: %s", cfgName)
 	}

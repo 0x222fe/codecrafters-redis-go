@@ -14,7 +14,7 @@ func getHandler(state *state.AppState, args []string, writer io.Writer) error {
 		return errors.New("Usage: GET <key>")
 	}
 
-	value, exists := state.Store.Get(args[0])
+	value, exists := state.GetStore().Get(args[0])
 	if !exists {
 		return writeResponse(writer, resp.RESPNIL)
 	}
