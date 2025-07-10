@@ -1,7 +1,9 @@
 package command
 
 import (
+	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
@@ -16,7 +18,28 @@ func psyncHandler(state *state.AppState, args []string, writer io.Writer) error 
 		return errors.New("PSYNC only supports ? -1 for now")
 	}
 
-	message := "+FULLRESYNC " + state.ReplicantionID + " " + "0" + "\r\n"
+	psyncMsg := "+FULLRESYNC " + state.ReplicantionID + " " + "0" + "\r\n"
 
-	return writeResponse(writer, []byte(message))
+	err := writeResponse(writer, []byte(psyncMsg))
+	if err != nil {
+		return err
+	}
+
+	emptyRdb := "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog=="
+
+	fileBytes, err := base64.StdEncoding.DecodeString(emptyRdb)
+	if err != nil {
+		return errors.New("failed to decode RDB file: " + err.Error())
+	}
+
+	header := fmt.Appendf(nil, "$%d\r\n", len(fileBytes))
+	if _, err := writer.Write(header); err != nil {
+		return fmt.Errorf("failed to write RDB header: %w", err)
+	}
+
+	if _, err := writer.Write(fileBytes); err != nil {
+		return fmt.Errorf("failed to write RDB file: %w", err)
+	}
+
+	return nil
 }
