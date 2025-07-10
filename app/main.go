@@ -103,6 +103,14 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 			return nil, errors.New("failed to send REPLCONF command: " + err.Error())
 		}
 
+		res, err = reader.ReadString('\n')
+		if err != nil {
+			return nil, errors.New("failed to read response from master server: " + err.Error())
+		}
+		if res != "+OK\r\n" {
+			return nil, errors.New("unexpected response from master server: " + res)
+		}
+
 		replconfEncoded, err = resp.RESPEncode([]string{"REPLCONF", "capa", "psync2"})
 		if err != nil {
 			return nil, errors.New("failed to encode REPLCONF capa command: " + err.Error())
@@ -113,7 +121,24 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 		}
 
 		res, err = reader.ReadString('\n')
+		if err != nil {
+			return nil, errors.New("failed to read response from master server: " + err.Error())
+		}
+		if res != "+OK\r\n" {
+			return nil, errors.New("unexpected response from master server: " + res)
+		}
 
+		psyncEncoded, err := resp.RESPEncode([]string{"PSYNC", "?", "-1"})
+		if err != nil {
+			return nil, errors.New("failed to encode PSYNC command: " + err.Error())
+		}
+
+		_, err = conn.Write(psyncEncoded)
+		if err != nil {
+			return nil, errors.New("failed to send PSYNC command: " + err.Error())
+		}
+
+		res, err = reader.ReadString('\n')
 	}
 
 	state := &state.AppState{
