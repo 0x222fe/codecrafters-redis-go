@@ -24,22 +24,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	var r *rdb.RDB
-
-	filename := filepath.Join(cfg.Dir, cfg.Dbfilename)
-	if filename != "" {
-		r, err = rdb.ReadRDBFile(filename)
-		if err != nil {
-			fmt.Printf("Failed to read RDB file: %s\n", err.Error())
-			r = nil
-		}
-	}
-
-	store := r.MapToStore()
-
-	state := &state.AppState{
-		Cfg:   cfg,
-		Store: store,
+	state, err := initRedis(cfg)
+	if err != nil {
+		fmt.Printf("Failed to initialize Redis: %s\n", err.Error())
+		os.Exit(1)
 	}
 
 	l, err := net.Listen("tcp", "0.0.0.0:"+strconv.Itoa(cfg.Port))
@@ -58,6 +46,38 @@ func main() {
 
 		go handleConnection(conn, state)
 	}
+}
+
+func initRedis(cfg *config.Config) (*state.AppState, error) {
+	var r *rdb.RDB
+	var err error
+
+	filename := filepath.Join(cfg.Dir, cfg.Dbfilename)
+	if filename != "" {
+		r, err = rdb.ReadRDBFile(filename)
+		if err != nil {
+			fmt.Printf("Failed to read RDB file: %s\n", err.Error())
+			r = nil
+		}
+	}
+
+	store := r.MapToStore()
+
+	isReplica := cfg.ReplicaHost != "" && cfg.ReplicaPort != 0
+
+	state := &state.AppState{
+		Cfg:       cfg,
+		Store:     store,
+		IsReplica: isReplica,
+	}
+
+	if !isReplica {
+		//INFO: hardcoded for now
+		state.ReplicantionID = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
+		state.ReplicantionOffset = 0
+	}
+
+	return state, nil
 }
 
 func handleConnection(conn net.Conn, state *state.AppState) {

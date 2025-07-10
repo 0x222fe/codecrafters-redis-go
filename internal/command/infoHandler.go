@@ -3,6 +3,7 @@ package command
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/state"
 )
@@ -17,7 +18,7 @@ func infoHandler(state *state.AppState, args []string) ([]byte, error) {
 	}
 
 	var role string
-	if state.Cfg.ReplicaHost != "" && state.Cfg.ReplicaPort != 0 {
+	if state.IsReplica {
 		role = "slave"
 	} else {
 		role = "master"
@@ -25,6 +26,10 @@ func infoHandler(state *state.AppState, args []string) ([]byte, error) {
 
 	info := "# Replication\r\n" +
 		"role:" + role + "\r\n"
+	if !state.IsReplica {
+		info += "master_replid:" + state.ReplicantionID + "\r\n" +
+			"master_repl_offset:" + strconv.Itoa(state.ReplicantionOffset) + "\r\n"
+	}
 
 	result := fmt.Sprintf("$%d\r\n%s\r\n", len(info), info)
 
