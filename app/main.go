@@ -157,7 +157,9 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 func handleConnection(conn net.Conn, state *state.AppState) {
 	defer conn.Close()
 	defer func() {
-
+		if tcpConn, ok := conn.(*net.TCPConn); ok {
+			state.RemoveReplica(tcpConn)
+		}
 	}()
 
 	reader := bufio.NewReader(conn)

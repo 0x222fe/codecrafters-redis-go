@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
@@ -29,6 +30,10 @@ func psyncHandler(appState *state.AppState, args []string, writer io.Writer) err
 	err := writeResponse(writer, []byte(psyncMsg))
 	if err != nil {
 		return err
+	}
+
+	if conn, ok := writer.(*net.TCPConn); ok {
+		appState.AddReplica(conn)
 	}
 
 	emptyRdb := "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog=="

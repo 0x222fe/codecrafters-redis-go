@@ -1,34 +1,38 @@
 package state
 
 import (
+	"fmt"
+	"io"
+	"net"
 	"sync"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/config"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 )
 
+type replica struct {
+	conn *net.TCPConn
+	mu   *sync.Mutex
+}
+
 type AppState struct {
-	mu sync.RWMutex
-	// Cfg               *config.Config
-	// Store             *store.Store
-	// IsReplica         bool
-	// ReplicationID     string
-	// ReplicationOffset int
-	state *State
+	mu       sync.RWMutex
+	cfg      *config.Config
+	store    *store.Store
+	replicas map[*net.TCPConn]replica
+	state    *State
 }
 
 func NewAppState(s *State, cfg *config.Config, store *store.Store) *AppState {
-	s.cfg = cfg
-	s.store = store
-
 	return &AppState{
-		state: s,
+		cfg:      cfg,
+		store:    store,
+		state:    s,
+		replicas: make(map[*net.TCPConn]replica),
 	}
 }
 
 type State struct {
-	cfg               *config.Config
-	store             *store.Store
 	IsReplica         bool
 	ReplicationID     string
 	ReplicationOffset int
@@ -47,11 +51,45 @@ func (s *AppState) WriteState(f func(s *State)) {
 }
 
 func (s *AppState) GetStore() *store.Store {
-	return s.state.store
+	return s.store
 }
 
 func (s *AppState) ReadCfg() config.Config {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return *s.state.cfg
+	return *s.cfg
+}
+
+func (s *AppState) AddReplica(conn *net.TCPConn) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.replicas[conn] = replica{
+		conn: conn,
+		mu:   &sync.Mutex{},
+	}
+	fmt.Printf("Replica connected: %s\n", conn.RemoteAddr().String())
+}
+
+func (s *AppState) RemoveReplica(conn *net.TCPConn) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	delete(s.replicas, conn)
+	fmt.Printf("Replica disconnected: %s\n", conn.RemoteAddr().String())
+}
+
+func (s *AppState) IterateReplicas(f func(conn io.Writer)) {
+	s.mu.RLock()
+	reps := make([]replica, 0, len(s.replicas))
+	for _, rep := range s.replicas {
+		reps = append(reps, rep)
+	}
+	s.mu.RUnlock()
+
+	for _, rep := range reps {
+		rep.mu.Lock()
+		f(rep.conn)
+		rep.mu.Unlock()
+	}
 }
