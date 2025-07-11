@@ -9,13 +9,24 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
-type command string
+type CommandKey string
 type commandType int
-type commandSpec struct {
-	handler commandHandler
+type Command struct {
+	Name CommandKey
+	Args []string
+	// Wether this command is propagated from master
+	Propagated bool
+}
+type simpleCommandSpec struct {
+	handler simpleHandler
 	cmdType commandType
 }
-type commandHandler func(state *state.AppState, args []string, writer io.Writer) error
+type streamCommandSpec struct {
+	handler streamHandler
+	cmdType commandType
+}
+type simpleHandler func(state *state.AppState, args []string) ([]byte, error)
+type streamHandler func(state *state.AppState, args []string, writer io.Writer) error
 
 type contextKey string
 
@@ -29,19 +40,19 @@ const (
 )
 
 const (
-	PING     command = "PING"
-	ECHO     command = "ECHO"
-	SET      command = "SET"
-	GET      command = "GET"
-	CONFIG   command = "CONFIG"
-	KEYS     command = "KEYS"
-	INFO     command = "INFO"
-	REPLCONF command = "REPLCONF"
-	PSYNC    command = "PSYNC"
+	PING     CommandKey = "PING"
+	ECHO     CommandKey = "ECHO"
+	SET      CommandKey = "SET"
+	GET      CommandKey = "GET"
+	CONFIG   CommandKey = "CONFIG"
+	KEYS     CommandKey = "KEYS"
+	INFO     CommandKey = "INFO"
+	REPLCONF CommandKey = "REPLCONF"
+	PSYNC    CommandKey = "PSYNC"
 )
 
 var (
-	commands = map[command]commandSpec{
+	simpleCommands = map[CommandKey]simpleCommandSpec{
 		PING:     {pingHandler, cmdTypeRead},
 		ECHO:     {echoHandler, cmdTypeRead},
 		SET:      {setHandler, cmdTypeWrite},
@@ -50,17 +61,30 @@ var (
 		KEYS:     {keysHandler, cmdTypeRead},
 		INFO:     {infoHandler, cmdTypeRead},
 		REPLCONF: {replconfHandler, cmdTypeRead},
-		PSYNC:    {psyncHandler, cmdTypeRead},
+	}
+	streamCommands = map[CommandKey]streamCommandSpec{
+		PSYNC: {psyncHandler, cmdTypeRead},
 	}
 )
 
-func RunCommand(appState *state.AppState, cmd string, args []string, writer io.Writer) error {
-	spec, exists := commands[command(cmd)]
-	if !exists {
-		return errors.New("unknown command: " + cmd)
+func RunCommand(appState *state.AppState, cmd Command, writer io.Writer) error {
+	cmdName := string(cmd.Name)
+
+	simpleSpec, findInSimple := simpleCommands[cmd.Name]
+	streamSpec, findInStream := streamCommands[cmd.Name]
+
+	if !findInSimple && !findInStream {
+		return errors.New("unknown command: " + cmdName)
 	}
 
-	if spec.cmdType == cmdTypeWrite {
+	var commandType commandType
+	if findInSimple {
+		commandType = simpleSpec.cmdType
+	} else {
+		commandType = streamSpec.cmdType
+	}
+
+	if commandType == cmdTypeWrite && !cmd.Propagated {
 		var isReplica bool
 		appState.ReadState(func(s state.State) {
 			isReplica = s.IsReplica
@@ -71,13 +95,31 @@ func RunCommand(appState *state.AppState, cmd string, args []string, writer io.W
 		}
 	}
 
-	err := spec.handler(appState, args, writer)
-	if err != nil {
-		return err
+	if findInSimple {
+		bytes, err := simpleSpec.handler(appState, cmd.Args)
+		if err != nil {
+			return err
+		}
+
+		if !cmd.Propagated {
+			err := writeResponse(writer, bytes)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		if cmd.Propagated {
+			return errors.New("stream commands cannot be propagated")
+		}
+
+		err := streamSpec.handler(appState, cmd.Args, writer)
+		if err != nil {
+			return err
+		}
 	}
 
-	if spec.cmdType == cmdTypeWrite {
-		replicaCommand, err := resp.RESPEncode(append([]string{cmd}, args...))
+	if commandType == cmdTypeWrite {
+		replicaCommand, err := resp.RESPEncode(append([]string{cmdName}, cmd.Args...))
 		if err != nil {
 			return fmt.Errorf("failed to encode command for replicas: %w", err)
 		}

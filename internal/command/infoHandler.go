@@ -3,19 +3,18 @@ package command
 import (
 	"errors"
 	"fmt"
-	"io"
 	"strconv"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
-func infoHandler(appState *state.AppState, args []string, writer io.Writer) error {
+func infoHandler(appState *state.AppState, args []string) ([]byte, error) {
 	if len(args) == 0 {
-		return errors.New("INFO requires at least one argument")
+		return nil, errors.New("INFO requires at least one argument")
 	}
 
 	if args[0] != "replication" {
-		return errors.New("only 'replication' section is supported")
+		return nil, errors.New("only 'replication' section is supported")
 	}
 
 	isReplica, repID, repOffset := false, "", 0
@@ -41,5 +40,5 @@ func infoHandler(appState *state.AppState, args []string, writer io.Writer) erro
 
 	result := fmt.Sprintf("$%d\r\n%s\r\n", len(info), info)
 
-	return writeResponse(writer, []byte(result))
+	return []byte(result), nil
 }

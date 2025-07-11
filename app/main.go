@@ -68,13 +68,22 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 
 	isReplica := cfg.MasterHost != "" && cfg.MasterPort != 0
 
+	state := state.NewAppState(
+		&state.State{
+
+			IsReplica: isReplica,
+			//INFO: hardcoded for now
+			ReplicationID:     "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb",
+			ReplicationOffset: 0,
+		}, cfg, store)
+
 	if isReplica {
 		replicaAddr := net.JoinHostPort(cfg.MasterHost, strconv.Itoa(cfg.MasterPort))
 		conn, err := net.Dial("tcp", replicaAddr)
 		if err != nil {
 			return nil, errors.New("failed to connect to master server: " + err.Error())
 		}
-		defer conn.Close()
+		// defer conn.Close()
 
 		pingEncoded, err := resp.RESPEncode([]string{"PING"})
 		if err != nil {
@@ -140,16 +149,12 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 		}
 
 		res, err = reader.ReadString('\n')
+		if err != nil {
+			return nil, errors.New("failed to read response from master server: " + err.Error())
+		}
+
+		go serveMaster(state, conn)
 	}
-
-	state := state.NewAppState(
-		&state.State{
-
-			IsReplica: isReplica,
-			//INFO: hardcoded for now
-			ReplicationID:     "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb",
-			ReplicationOffset: 0,
-		}, cfg, store)
 
 	return state, nil
 }
@@ -165,7 +170,7 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 	reader := bufio.NewReader(conn)
 
 	for {
-		cmd, args, err := parser.Parse(reader)
+		cmd, err := parser.Parse(reader)
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println("Client disconnected")
@@ -175,7 +180,34 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue
 		}
-		err = command.RunCommand(state, cmd, args, conn)
+		err = command.RunCommand(state, cmd, conn)
+		if err != nil {
+			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
+			continue
+		}
+	}
+}
+
+func serveMaster(state *state.AppState, conn net.Conn) {
+	defer conn.Close()
+
+	reader := bufio.NewReader(conn)
+
+	for {
+		cmd, err := parser.Parse(reader)
+		cmd.Propagated = true
+
+		if err != nil {
+			if err == io.EOF {
+				fmt.Println("Client disconnected")
+				return
+			}
+
+			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
+			continue
+		}
+
+		err = command.RunCommand(state, cmd, conn)
 		if err != nil {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue
