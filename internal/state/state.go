@@ -33,9 +33,10 @@ func NewAppState(s *State, cfg *config.Config, store *store.Store) *AppState {
 }
 
 type State struct {
-	IsReplica         bool
-	ReplicationID     string
-	ReplicationOffset int
+	IsReplica           bool
+	MasterReplicationID string
+	ReplicationID       string
+	ReplicationOffset   int
 }
 
 func (s *AppState) ReadState(f func(s State)) {
@@ -50,7 +51,15 @@ func (s *AppState) WriteState(f func(s *State)) {
 	f(s.state)
 }
 
+func (s *AppState) SetStore(store *store.Store) {
+	s.mu.Lock()
+	defer s.mu.RUnlock()
+	s.store = store
+}
+
 func (s *AppState) GetStore() *store.Store {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.store
 }
 

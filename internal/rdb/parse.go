@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"os"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 )
 
 func ReadRDBFile(filename string) (*RDB, error) {
+
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -20,6 +22,15 @@ func ReadRDBFile(filename string) (*RDB, error) {
 	defer file.Close()
 
 	reader := bufio.NewReader(file)
+
+	return ParseRDB(reader)
+}
+
+func ParseRDB(r io.Reader) (*RDB, error) {
+	crc := crc64.New()
+
+	tee := io.TeeReader(r, crc)
+	reader := bufio.NewReader(tee)
 
 	rdb := &RDB{
 		metadata:  make(map[string]string),
@@ -38,32 +49,9 @@ func ReadRDBFile(filename string) (*RDB, error) {
 		return nil, fmt.Errorf("database parsing error: %v", err)
 	}
 
-	checksum, err := parseEnd(reader)
+	err := parseEnd(reader, crc)
 	if err != nil {
 		return nil, fmt.Errorf("end parsing error: %v", err)
-	}
-
-	file.Seek(0, io.SeekStart)
-
-	data, err := io.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
-
-	content := data[:len(data)-8]
-
-	crc := crc64.Digest(content)
-	actual := uint64(checksum[0]) |
-		uint64(checksum[1])<<8 |
-		uint64(checksum[2])<<16 |
-		uint64(checksum[3])<<24 |
-		uint64(checksum[4])<<32 |
-		uint64(checksum[5])<<40 |
-		uint64(checksum[6])<<48 |
-		uint64(checksum[7])<<56
-
-	if crc != actual {
-		return nil, fmt.Errorf("checksum mismatch: computed %x, expected %x", crc, actual)
 	}
 
 	return rdb, nil
@@ -254,30 +242,38 @@ func parseKeyValue(reader *bufio.Reader, db *database, hashSize, expirySize int)
 	return nil
 }
 
-func parseEnd(reader *bufio.Reader) (checksum []byte, err error) {
+func parseEnd(reader *bufio.Reader, crc hash.Hash64) error {
 	flag, err := reader.ReadByte()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if flag != endFlag {
-		return nil, fmt.Errorf("expected end flag, got 0x%02X", flag)
+		return fmt.Errorf("expected end flag, got 0x%02X", flag)
 	}
 
-	bytes := make([]byte, 8)
-	if _, err := io.ReadFull(reader, bytes); err != nil {
-		return nil, fmt.Errorf("error reading checksum: %v", err)
+	calculatedChecksum := crc.Sum64()
+
+	checksumBytes := make([]byte, 8)
+	if _, err := io.ReadFull(reader, checksumBytes); err != nil {
+		return fmt.Errorf("error reading checksum: %v", err)
+	}
+
+	checksum := binary.LittleEndian.Uint64(checksumBytes)
+
+	if checksum != calculatedChecksum {
+		return fmt.Errorf("checksum mismatch: calculated %x, expected %x", calculatedChecksum, checksum)
 	}
 
 	_, err = reader.ReadByte()
 	if err == io.EOF {
-		return bytes, nil
+		return nil
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("unexpected error after checksum: %v", err)
+		return fmt.Errorf("unexpected error after checksum: %v", err)
 	}
-	return nil, fmt.Errorf("expected EOF after checksum, but found extra data")
+	return fmt.Errorf("expected EOF after checksum, but found extra data")
 }
 
 func readEncodedSize(reader *bufio.Reader) (int, error) {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -9,13 +10,14 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/command"
 	"github.com/0x222fe/codecrafters-redis-go/internal/config"
-	"github.com/0x222fe/codecrafters-redis-go/internal/parser"
 	"github.com/0x222fe/codecrafters-redis-go/internal/rdb"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
 )
 
 func main() {
@@ -70,87 +72,23 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 
 	state := state.NewAppState(
 		&state.State{
-
-			IsReplica: isReplica,
-			//INFO: hardcoded for now
-			ReplicationID:     "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb",
-			ReplicationOffset: 0,
+			IsReplica:           isReplica,
+			MasterReplicationID: "",
+			ReplicationID:       "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb", //INFO: hardcoded for now
+			ReplicationOffset:   0,
 		}, cfg, store)
 
 	if isReplica {
-		replicaAddr := net.JoinHostPort(cfg.MasterHost, strconv.Itoa(cfg.MasterPort))
-		conn, err := net.Dial("tcp", replicaAddr)
+		masterAddr := net.JoinHostPort(cfg.MasterHost, strconv.Itoa(cfg.MasterPort))
+		conn, err := net.Dial("tcp", masterAddr)
 		if err != nil {
 			return nil, errors.New("failed to connect to master server: " + err.Error())
 		}
-		// defer conn.Close()
 
-		pingEncoded, err := resp.RESPEncode([]string{"PING"})
+		err = initRepHandshake(state, conn)
 		if err != nil {
-			return nil, errors.New("failed to encode PING command: " + err.Error())
-		}
-		_, err = conn.Write(pingEncoded)
-		if err != nil {
-			return nil, errors.New("failed to send PING command: " + err.Error())
-		}
-
-		reader := bufio.NewReader(conn)
-
-		res, err := reader.ReadString('\n')
-		if err != nil {
-			return nil, errors.New("failed to read response from master server: " + err.Error())
-		}
-		if res != "+PONG\r\n" {
-			return nil, errors.New("unexpected response from master server: " + res)
-		}
-
-		replconfEncoded, err := resp.RESPEncode([]string{"REPLCONF", "listening-port", strconv.Itoa(cfg.Port)})
-		if err != nil {
-			return nil, errors.New("failed to encode REPLCONF command: " + err.Error())
-		}
-		_, err = conn.Write(replconfEncoded)
-		if err != nil {
-			return nil, errors.New("failed to send REPLCONF command: " + err.Error())
-		}
-
-		res, err = reader.ReadString('\n')
-		if err != nil {
-			return nil, errors.New("failed to read response from master server: " + err.Error())
-		}
-		if res != "+OK\r\n" {
-			return nil, errors.New("unexpected response from master server: " + res)
-		}
-
-		replconfEncoded, err = resp.RESPEncode([]string{"REPLCONF", "capa", "psync2"})
-		if err != nil {
-			return nil, errors.New("failed to encode REPLCONF capa command: " + err.Error())
-		}
-		_, err = conn.Write(replconfEncoded)
-		if err != nil {
-			return nil, errors.New("failed to send REPLCONF capa command: " + err.Error())
-		}
-
-		res, err = reader.ReadString('\n')
-		if err != nil {
-			return nil, errors.New("failed to read response from master server: " + err.Error())
-		}
-		if res != "+OK\r\n" {
-			return nil, errors.New("unexpected response from master server: " + res)
-		}
-
-		psyncEncoded, err := resp.RESPEncode([]string{"PSYNC", "?", "-1"})
-		if err != nil {
-			return nil, errors.New("failed to encode PSYNC command: " + err.Error())
-		}
-
-		_, err = conn.Write(psyncEncoded)
-		if err != nil {
-			return nil, errors.New("failed to send PSYNC command: " + err.Error())
-		}
-
-		res, err = reader.ReadString('\n')
-		if err != nil {
-			return nil, errors.New("failed to read response from master server: " + err.Error())
+			conn.Close()
+			return nil, fmt.Errorf("failed to initialize replication handshake: %w", err)
 		}
 
 		go serveMaster(state, conn)
@@ -170,7 +108,7 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 	reader := bufio.NewReader(conn)
 
 	for {
-		cmd, err := parser.Parse(reader)
+		respVal, err := resp.DecodeRESPInputExact(reader, resp.RESPArr)
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println("Client disconnected")
@@ -180,6 +118,13 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue
 		}
+
+		cmd, err := command.FromRESP(respVal)
+		if err != nil {
+			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
+			continue
+		}
+
 		err = command.RunCommand(state, cmd, conn)
 		if err != nil {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
@@ -192,14 +137,11 @@ func serveMaster(state *state.AppState, conn net.Conn) {
 	defer conn.Close()
 
 	reader := bufio.NewReader(conn)
-
 	for {
-		cmd, err := parser.Parse(reader)
-		cmd.Propagated = true
-
+		respVal, err := resp.DecodeRESPInputExact(reader, resp.RESPArr)
 		if err != nil {
 			if err == io.EOF {
-				fmt.Println("Client disconnected")
+				fmt.Println("Lost connection to master")
 				return
 			}
 
@@ -207,10 +149,126 @@ func serveMaster(state *state.AppState, conn net.Conn) {
 			continue
 		}
 
+		cmd, err := command.FromRESP(respVal)
+		if err != nil {
+			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
+			continue
+		}
+
+		cmd.Propagated = true
+
 		err = command.RunCommand(state, cmd, conn)
 		if err != nil {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue
 		}
 	}
+}
+
+func initRepHandshake(appState *state.AppState, conn net.Conn) error {
+	pingEncoded := resp.NewRESPString("PING").Encode()
+	_, err := conn.Write(pingEncoded)
+	if err != nil {
+		return errors.New("failed to send PING command: " + err.Error())
+	}
+
+	reader := bufio.NewReader(conn)
+
+	res, err := resp.DecodeRESPInputExact(reader, resp.RESPStr)
+	if err != nil {
+		return errors.New("failed to read response from master server: " + err.Error())
+	}
+	if val, ok := res.GetStringValue(); !ok || val != "PONG" {
+		return errors.New("unexpected response from master server, expected 'PONG', got: " + val)
+	}
+
+	localPort := appState.ReadCfg().Port
+	replconfEncoded := utils.EncodeStringSliceToRESP([]string{"REPLCONF", "listening-port", strconv.Itoa(localPort)})
+	_, err = conn.Write(replconfEncoded)
+	if err != nil {
+		return errors.New("failed to send REPLCONF command: " + err.Error())
+	}
+
+	res, err = resp.DecodeRESPInputExact(reader, resp.RESPStr)
+	if err != nil {
+		return errors.New("failed to read response from master server: " + err.Error())
+	}
+	if val, ok := res.GetStringValue(); !ok || val != "OK" {
+		return errors.New("unexpected response from master server, expected 'OK', got: " + val)
+	}
+
+	replconfEncoded = utils.EncodeStringSliceToRESP([]string{"REPLCONF", "capa", "psync2"})
+	_, err = conn.Write(replconfEncoded)
+	if err != nil {
+		return errors.New("failed to send REPLCONF capa command: " + err.Error())
+	}
+
+	res, err = resp.DecodeRESPInputExact(reader, resp.RESPStr)
+	if err != nil {
+		return errors.New("failed to read response from master server: " + err.Error())
+	}
+	if val, ok := res.GetStringValue(); !ok || val != "OK" {
+		return errors.New("unexpected response from master server, expected 'OK', got: " + val)
+	}
+
+	psyncEncoded := utils.EncodeStringSliceToRESP([]string{"PSYNC", "?", "-1"})
+	_, err = conn.Write(psyncEncoded)
+	if err != nil {
+		return errors.New("failed to send PSYNC command: " + err.Error())
+	}
+	res, err = resp.DecodeRESPInputExact(reader, resp.RESPStr)
+	if err != nil {
+		return errors.New("failed to read response from master server: " + err.Error())
+	}
+
+	content, ok := res.GetStringValue()
+	if !ok {
+		return errors.New("unexpected response from master server, expected string, got: " + res.GetType())
+	}
+
+	if !strings.HasPrefix(content, "FULLRESYNC ") {
+		return errors.New("unexpected response from master server, expected 'FULLRESYNC', got: " + content)
+	}
+
+	parts := strings.SplitN(content, " ", 3)
+
+	if len(parts) != 3 {
+		return errors.New("unexpected response format from master server, expected 'FULLRESYNC <replication_id> <offset>', got: " + content)
+	}
+
+	masterRepID := parts[1]
+	if masterRepID == "" {
+		return errors.New("replication ID cannot be empty")
+	}
+	repOffset, err := strconv.Atoi(parts[2])
+	if err != nil {
+		return fmt.Errorf("invalid replication offset: %w", err)
+	}
+
+	appState.WriteState(func(s *state.State) {
+		s.MasterReplicationID = masterRepID
+		s.ReplicationOffset = repOffset
+	})
+
+	res, err = resp.DecodeRESPInputExact(reader, resp.RESPBulkStr)
+	if err != nil {
+		return errors.New("failed to read RDB file from master server: " + err.Error())
+	}
+
+	rdbByteStr, ok := res.GetBulkStringValue()
+	if !ok {
+		return errors.New("unexpected response from master server, expected bulk string, got: " + res.GetType())
+	}
+
+	if rdbByteStr == nil || len(*rdbByteStr) == 0 {
+		return errors.New("received empty RDB bytes from master server")
+	}
+
+	r := bytes.NewReader([]byte(*rdbByteStr))
+	rdbData, err := rdb.ParseRDB(r)
+
+	store := rdbData.MapToStore()
+	appState.SetStore(store)
+
+	return nil
 }
