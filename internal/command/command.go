@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
@@ -98,7 +99,7 @@ func FromRESP(v resp.RESPValue) (Command, error) {
 	}
 
 	return Command{
-		Name:       CommandKey(*cmdName),
+		Name:       CommandKey(strings.ToUpper(*cmdName)),
 		Args:       args,
 		Propagated: false,
 	}, nil
@@ -138,7 +139,7 @@ func RunCommand(appState *state.AppState, cmd Command, writer io.Writer) error {
 			return err
 		}
 
-		if !cmd.Propagated {
+		if commandType != cmdTypeWrite || !cmd.Propagated {
 			err := writeResponse(writer, bytes)
 			if err != nil {
 				return err

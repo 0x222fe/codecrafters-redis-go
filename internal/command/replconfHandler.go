@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
 )
@@ -22,7 +23,8 @@ func replconfHandler(state *state.AppState, args []string) ([]byte, error) {
 	// case "ACK":
 	// 	return replconfAck(state, args[1:])
 	default:
-		return nil, errors.New("Unknown REPLCONF subcommand: " + subcommand)
+		// return nil, errors.New("Unknown REPLCONF subcommand: " + subcommand)
+		return resp.NewRESPString("OK").Encode(), nil
 	}
 }
 

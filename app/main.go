@@ -80,18 +80,22 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 
 	if isReplica {
 		masterAddr := net.JoinHostPort(cfg.MasterHost, strconv.Itoa(cfg.MasterPort))
+		fmt.Printf("Connecting to master server at %s...\n", masterAddr)
 		conn, err := net.Dial("tcp", masterAddr)
 		if err != nil {
 			return nil, errors.New("failed to connect to master server: " + err.Error())
 		}
 
-		err = initRepHandshake(state, conn)
+		reader := bufio.NewReader(conn)
+		err = initRepHandshake(state, reader, conn)
 		if err != nil {
 			conn.Close()
 			return nil, fmt.Errorf("failed to initialize replication handshake: %w", err)
 		}
 
-		go serveMaster(state, conn)
+		fmt.Printf("Connected to master server at %s\n", masterAddr)
+
+		go serveMaster(state, conn, reader)
 	}
 
 	return state, nil
@@ -120,6 +124,8 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 		}
 
 		cmd, err := command.FromRESP(respVal)
+
+		fmt.Printf("Received command: %s\n", cmd.Name)
 		if err != nil {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue
@@ -133,10 +139,8 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 	}
 }
 
-func serveMaster(state *state.AppState, conn net.Conn) {
+func serveMaster(state *state.AppState, conn net.Conn, reader *bufio.Reader) {
 	defer conn.Close()
-
-	reader := bufio.NewReader(conn)
 	for {
 		respVal, err := resp.DecodeRESPInputExact(reader, resp.RESPArr)
 		if err != nil {
@@ -145,13 +149,14 @@ func serveMaster(state *state.AppState, conn net.Conn) {
 				return
 			}
 
-			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
+			// fmt.Printf("Error reading command from master: %s\n", err.Error())
 			continue
 		}
 
 		cmd, err := command.FromRESP(respVal)
+		fmt.Println("Received command from master:", cmd.Name)
 		if err != nil {
-			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
+			fmt.Printf("Error parsing command from master: %s\n", err.Error())
 			continue
 		}
 
@@ -159,20 +164,18 @@ func serveMaster(state *state.AppState, conn net.Conn) {
 
 		err = command.RunCommand(state, cmd, conn)
 		if err != nil {
-			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
+			fmt.Printf("Error executing command from master: %s\n", err.Error())
 			continue
 		}
 	}
 }
 
-func initRepHandshake(appState *state.AppState, conn net.Conn) error {
+func initRepHandshake(appState *state.AppState, reader *bufio.Reader, writer io.Writer) error {
 	pingCmd := utils.EncodeStringSliceToRESP([]string{"PING"})
-	_, err := conn.Write(pingCmd)
+	_, err := writer.Write(pingCmd)
 	if err != nil {
 		return errors.New("failed to send PING command: " + err.Error())
 	}
-
-	reader := bufio.NewReader(conn)
 
 	res, err := resp.DecodeRESPInputExact(reader, resp.RESPStr)
 	if err != nil {
@@ -184,7 +187,7 @@ func initRepHandshake(appState *state.AppState, conn net.Conn) error {
 
 	localPort := appState.ReadCfg().Port
 	replconfEncoded := utils.EncodeStringSliceToRESP([]string{"REPLCONF", "listening-port", strconv.Itoa(localPort)})
-	_, err = conn.Write(replconfEncoded)
+	_, err = writer.Write(replconfEncoded)
 	if err != nil {
 		return errors.New("failed to send REPLCONF command: " + err.Error())
 	}
@@ -198,7 +201,7 @@ func initRepHandshake(appState *state.AppState, conn net.Conn) error {
 	}
 
 	replconfEncoded = utils.EncodeStringSliceToRESP([]string{"REPLCONF", "capa", "psync2"})
-	_, err = conn.Write(replconfEncoded)
+	_, err = writer.Write(replconfEncoded)
 	if err != nil {
 		return errors.New("failed to send REPLCONF capa command: " + err.Error())
 	}
@@ -212,7 +215,7 @@ func initRepHandshake(appState *state.AppState, conn net.Conn) error {
 	}
 
 	psyncEncoded := utils.EncodeStringSliceToRESP([]string{"PSYNC", "?", "-1"})
-	_, err = conn.Write(psyncEncoded)
+	_, err = writer.Write(psyncEncoded)
 	if err != nil {
 		return errors.New("failed to send PSYNC command: " + err.Error())
 	}
