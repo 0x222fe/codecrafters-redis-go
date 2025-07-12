@@ -53,7 +53,7 @@ func (s *AppState) WriteState(f func(s *State)) {
 
 func (s *AppState) SetStore(store *store.Store) {
 	s.mu.Lock()
-	defer s.mu.RUnlock()
+	defer s.mu.Unlock()
 	s.store = store
 }
 

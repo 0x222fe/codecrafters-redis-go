@@ -166,8 +166,8 @@ func serveMaster(state *state.AppState, conn net.Conn) {
 }
 
 func initRepHandshake(appState *state.AppState, conn net.Conn) error {
-	pingEncoded := resp.NewRESPString("PING").Encode()
-	_, err := conn.Write(pingEncoded)
+	pingCmd := utils.EncodeStringSliceToRESP([]string{"PING"})
+	_, err := conn.Write(pingCmd)
 	if err != nil {
 		return errors.New("failed to send PING command: " + err.Error())
 	}
