@@ -53,5 +53,9 @@ func psyncHandler(appState *state.AppState, args []string, writer io.Writer) err
 		return fmt.Errorf("failed to write RDB file: %w", err)
 	}
 
+	if _, err := writer.Write([]byte("\r\n")); err != nil {
+		return fmt.Errorf("failed to write RDB footer: %w", err)
+	}
+
 	return nil
 }
