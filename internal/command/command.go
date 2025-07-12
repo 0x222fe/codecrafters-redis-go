@@ -7,6 +7,7 @@ import (
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
 )
 
 type CommandKey string
@@ -67,6 +68,42 @@ var (
 	}
 )
 
+func FromRESP(v resp.RESPValue) (Command, error) {
+	arr, ok := v.GetArrayValue()
+	if !ok {
+		return Command{}, fmt.Errorf("expected RESP array, got %s", v.GetType())
+	}
+
+	if len(arr) < 1 {
+		return Command{}, errors.New("command array must have at least one element")
+	}
+
+	cmdName, ok := arr[0].GetBulkStringValue()
+	if !ok || cmdName == nil {
+		return Command{}, errors.New("first element of command array must be a bulk string")
+	}
+
+	args := make([]string, 0, len(arr)-1)
+	for _, v := range arr[1:] {
+		arg, ok := v.GetBulkStringValue()
+		if !ok {
+			return Command{}, fmt.Errorf("command argument %v is not a string", v)
+		}
+
+		if arg == nil {
+			return Command{}, errors.New("command argument cannot be nil")
+		}
+
+		args = append(args, *arg)
+	}
+
+	return Command{
+		Name:       CommandKey(*cmdName),
+		Args:       args,
+		Propagated: false,
+	}, nil
+}
+
 func RunCommand(appState *state.AppState, cmd Command, writer io.Writer) error {
 	cmdName := string(cmd.Name)
 
@@ -119,10 +156,8 @@ func RunCommand(appState *state.AppState, cmd Command, writer io.Writer) error {
 	}
 
 	if commandType == cmdTypeWrite {
-		replicaCommand, err := resp.RESPEncode(append([]string{cmdName}, cmd.Args...))
-		if err != nil {
-			return fmt.Errorf("failed to encode command for replicas: %w", err)
-		}
+		replicaCommand := utils.EncodeStringSliceToRESP(append([]string{cmdName}, cmd.Args...))
+
 		appState.IterateReplicas(func(conn io.Writer) {
 			if _, err := conn.Write(replicaCommand); err != nil {
 				fmt.Printf("failed to send command to replica: %v\n", err)

@@ -3,6 +3,7 @@ package command
 import (
 	"errors"
 
+	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
@@ -11,7 +12,7 @@ func echoHandler(state *state.AppState, args []string) ([]byte, error) {
 		return nil, errors.New("ECHO requires at least one argument")
 	}
 
-	response := "+" + args[0] + "\r\n"
+	encoded := resp.NewRESPString(args[0]).Encode()
 
-	return []byte(response), nil
+	return encoded, nil
 }

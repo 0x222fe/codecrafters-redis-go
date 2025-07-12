@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 
+	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
@@ -25,9 +26,9 @@ func psyncHandler(appState *state.AppState, args []string, writer io.Writer) err
 		replicationID = s.ReplicationID
 	})
 
-	psyncMsg := "+FULLRESYNC " + replicationID + " " + "0" + "\r\n"
+	psyncMsg := resp.NewRESPString("FULLRESYNC " + replicationID + " " + "0").Encode()
 
-	err := writeResponse(writer, []byte(psyncMsg))
+	err := writeResponse(writer, psyncMsg)
 	if err != nil {
 		return err
 	}

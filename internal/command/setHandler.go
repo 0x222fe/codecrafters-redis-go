@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
@@ -42,5 +43,5 @@ func setHandler(appState *state.AppState, args []string) ([]byte, error) {
 
 	appState.GetStore().Set(args[0], args[1], expireAt)
 
-	return []byte("+OK\r\n"), nil
+	return resp.NewRESPString("+OK").Encode(), nil
 }

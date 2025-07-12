@@ -2,10 +2,9 @@ package command
 
 import (
 	"errors"
-	"fmt"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
 )
 
 func keysHandler(state *state.AppState, args []string) ([]byte, error) {
@@ -19,10 +18,7 @@ func keysHandler(state *state.AppState, args []string) ([]byte, error) {
 
 	keys := state.GetStore().Keys()
 
-	result, err := resp.RESPEncode(keys)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode keys into RESP format: %w", err)
-	}
+	result := utils.EncodeStringSliceToRESP(keys)
 
 	return result, nil
 }

@@ -2,9 +2,9 @@ package command
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 
+	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
@@ -38,7 +38,7 @@ func infoHandler(appState *state.AppState, args []string) ([]byte, error) {
 			"master_repl_offset:" + strconv.Itoa(repOffset) + "\r\n"
 	}
 
-	result := fmt.Sprintf("$%d\r\n%s\r\n", len(info), info)
+	encoded := resp.NewRESPBulkString(&info).Encode()
 
-	return []byte(result), nil
+	return encoded, nil
 }

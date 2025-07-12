@@ -2,7 +2,6 @@ package command
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
@@ -15,13 +14,10 @@ func getHandler(state *state.AppState, args []string) ([]byte, error) {
 
 	value, exists := state.GetStore().Get(args[0])
 	if !exists {
-		return resp.RESPNIL, nil
+		return resp.RESPNilArray.Encode(), nil
 	}
 
-	result, err := resp.RESPEncode(value)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode value into RESP format: %w", err)
-	}
+	encoded := resp.NewRESPString(value).Encode()
 
-	return result, nil
+	return encoded, nil
 }

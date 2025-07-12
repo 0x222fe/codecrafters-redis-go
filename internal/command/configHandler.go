@@ -7,6 +7,7 @@ import (
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
 )
 
 func configHandler(state *state.AppState, args []string) ([]byte, error) {
@@ -22,14 +23,11 @@ func configHandler(state *state.AppState, args []string) ([]byte, error) {
 			return nil, err
 		}
 
-		result, err := resp.RESPEncode([]string{cfgName, val})
-		if err != nil {
-			return nil, fmt.Errorf("failed to encode into RESP format: %w", err)
-		}
-		return result, nil
+		encoded := utils.EncodeStringSliceToRESP([]string{cfgName, val})
+		return encoded, nil
 
 	default:
-		return resp.RESPNIL, nil
+		return resp.RESPNilBulkString.Encode(), nil
 	}
 }
 
