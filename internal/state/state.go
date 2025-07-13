@@ -2,24 +2,18 @@ package state
 
 import (
 	"fmt"
-	"io"
-	"net"
 	"sync"
 
+	"github.com/0x222fe/codecrafters-redis-go/internal/cnn"
 	"github.com/0x222fe/codecrafters-redis-go/internal/config"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 )
-
-type replica struct {
-	conn *net.TCPConn
-	mu   *sync.Mutex
-}
 
 type AppState struct {
 	mu       sync.RWMutex
 	cfg      *config.Config
 	store    *store.Store
-	replicas map[*net.TCPConn]replica
+	replicas map[*cnn.Connection]struct{}
 	state    *State
 }
 
@@ -28,7 +22,7 @@ func NewAppState(s *State, cfg *config.Config, store *store.Store) *AppState {
 		cfg:      cfg,
 		store:    store,
 		state:    s,
-		replicas: make(map[*net.TCPConn]replica),
+		replicas: make(map[*cnn.Connection]struct{}),
 	}
 }
 
@@ -69,18 +63,15 @@ func (s *AppState) ReadCfg() config.Config {
 	return *s.cfg
 }
 
-func (s *AppState) AddReplica(conn *net.TCPConn) {
+func (s *AppState) AddReplica(conn *cnn.Connection) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.replicas[conn] = replica{
-		conn: conn,
-		mu:   &sync.Mutex{},
-	}
+	s.replicas[conn] = struct{}{}
 	fmt.Printf("Replica connected: %s\n", conn.RemoteAddr().String())
 }
 
-func (s *AppState) RemoveReplica(conn *net.TCPConn) {
+func (s *AppState) RemoveReplica(conn *cnn.Connection) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -90,17 +81,15 @@ func (s *AppState) RemoveReplica(conn *net.TCPConn) {
 	}
 }
 
-func (s *AppState) IterateReplicas(f func(conn io.Writer)) {
+func (s *AppState) IterateReplicas(f func(conn *cnn.Connection)) {
 	s.mu.RLock()
-	reps := make([]replica, 0, len(s.replicas))
-	for _, rep := range s.replicas {
-		reps = append(reps, rep)
+	reps := make([]*cnn.Connection, 0, len(s.replicas))
+	for c := range s.replicas {
+		reps = append(reps, c)
 	}
 	s.mu.RUnlock()
 
-	for _, rep := range reps {
-		rep.mu.Lock()
-		f(rep.conn)
-		rep.mu.Unlock()
+	for _, c := range reps {
+		f(c)
 	}
 }

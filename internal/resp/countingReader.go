@@ -1,18 +1,17 @@
 package resp
 
 import (
-	"bufio"
-	"io"
+	"github.com/0x222fe/codecrafters-redis-go/internal/cnn"
 )
 
 type countingReader struct {
-	reader *bufio.Reader
+	reader *cnn.Connection
 	count  int
 }
 
-func newCountingReader(reader io.Reader) *countingReader {
+func newCountingReader(reader *cnn.Connection) *countingReader {
 	return &countingReader{
-		reader: bufio.NewReader(reader),
+		reader: reader,
 		count:  0,
 	}
 }

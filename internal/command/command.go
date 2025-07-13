@@ -3,9 +3,9 @@ package command
 import (
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 
+	"github.com/0x222fe/codecrafters-redis-go/internal/cnn"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
@@ -28,7 +28,7 @@ type streamCommandSpec struct {
 	cmdType commandType
 }
 type simpleHandler func(state *state.AppState, args []string) ([]byte, error)
-type streamHandler func(state *state.AppState, args []string, writer io.Writer) error
+type streamHandler func(state *state.AppState, args []string, conn *cnn.Connection) error
 
 type contextKey string
 
@@ -105,7 +105,7 @@ func FromRESP(v resp.RESPValue) (Command, error) {
 	}, nil
 }
 
-func RunCommand(appState *state.AppState, cmd Command, writer io.Writer) error {
+func RunCommand(appState *state.AppState, cmd Command, conn *cnn.Connection) error {
 	cmdName := string(cmd.Name)
 
 	simpleSpec, findInSimple := simpleCommands[cmd.Name]
@@ -141,7 +141,7 @@ func RunCommand(appState *state.AppState, cmd Command, writer io.Writer) error {
 
 		if cmd.Name == REPLCONF || !cmd.Propagated {
 			if len(bytes) > 0 {
-				err := writeResponse(writer, bytes)
+				err := writeResponse(conn, bytes)
 				if err != nil {
 					return err
 				}
@@ -152,7 +152,7 @@ func RunCommand(appState *state.AppState, cmd Command, writer io.Writer) error {
 			return errors.New("stream commands cannot be propagated")
 		}
 
-		err := streamSpec.handler(appState, cmd.Args, writer)
+		err := streamSpec.handler(appState, cmd.Args, conn)
 		if err != nil {
 			return err
 		}
@@ -161,9 +161,9 @@ func RunCommand(appState *state.AppState, cmd Command, writer io.Writer) error {
 	if commandType == cmdTypeWrite {
 		replicaCommand := utils.EncodeStringSliceToRESP(append([]string{cmdName}, cmd.Args...))
 
-		appState.IterateReplicas(func(conn io.Writer) {
+		appState.IterateReplicas(func(conn *cnn.Connection) {
 			if _, err := conn.Write(replicaCommand); err != nil {
-				fmt.Printf("failed to send command to replica: %v\n", err)
+				fmt.Printf("failed to propagate command to replica %s: %v\n", conn.RemoteAddr(), err)
 			}
 		})
 	}
@@ -171,9 +171,8 @@ func RunCommand(appState *state.AppState, cmd Command, writer io.Writer) error {
 	return nil
 }
 
-func writeResponse(writer io.Writer, response []byte) error {
-	_, err := writer.Write(response)
-	// fmt.Println("Response written:", string(response))
+func writeResponse(conn *cnn.Connection, response []byte) error {
+	_, err := conn.Write(response)
 	if err != nil {
 		return fmt.Errorf("failed to write response: %w", err)
 	}

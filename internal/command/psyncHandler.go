@@ -4,14 +4,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
-	"net"
 
+	"github.com/0x222fe/codecrafters-redis-go/internal/cnn"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
-func psyncHandler(appState *state.AppState, args []string, writer io.Writer) error {
+func psyncHandler(appState *state.AppState, args []string, conn *cnn.Connection) error {
 	if len(args) < 2 {
 		return errors.New("PSYNC requires at least 2 arguments")
 	}
@@ -28,14 +27,12 @@ func psyncHandler(appState *state.AppState, args []string, writer io.Writer) err
 
 	psyncMsg := resp.NewRESPString("FULLRESYNC " + replicationID + " " + "0").Encode()
 
-	err := writeResponse(writer, psyncMsg)
+	err := writeResponse(conn, psyncMsg)
 	if err != nil {
 		return err
 	}
 
-	if conn, ok := writer.(*net.TCPConn); ok {
-		appState.AddReplica(conn)
-	}
+	appState.AddReplica(conn)
 
 	emptyRdb := "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog=="
 
@@ -45,11 +42,11 @@ func psyncHandler(appState *state.AppState, args []string, writer io.Writer) err
 	}
 
 	header := fmt.Appendf(nil, "$%d\r\n", len(fileBytes))
-	if _, err := writer.Write(header); err != nil {
+	if _, err := conn.Write(header); err != nil {
 		return fmt.Errorf("failed to write RDB header: %w", err)
 	}
 
-	if _, err := writer.Write(fileBytes); err != nil {
+	if _, err := conn.Write(fileBytes); err != nil {
 		return fmt.Errorf("failed to write RDB file: %w", err)
 	}
 
