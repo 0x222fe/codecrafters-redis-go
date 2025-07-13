@@ -178,12 +178,12 @@ func initRepHandshake(appState *state.AppState, reader *bufio.Reader, writer io.
 	pingCmd := utils.EncodeStringSliceToRESP([]string{"PING"})
 	_, err := writer.Write(pingCmd)
 	if err != nil {
-		return errors.New("failed to send PING command: " + err.Error())
+		return fmt.Errorf("failed to send PING command: %w", err)
 	}
 
 	res, err := resp.DecodeRESPInputExact(reader, resp.RESPStr)
 	if err != nil {
-		return errors.New("failed to read response from master server: " + err.Error())
+		return fmt.Errorf("failed to read response from master server: %w", err)
 	}
 	if val, ok := res.GetStringValue(); !ok || val != "PONG" {
 		return errors.New("unexpected response from master server, expected 'PONG', got: " + val)
@@ -193,12 +193,12 @@ func initRepHandshake(appState *state.AppState, reader *bufio.Reader, writer io.
 	replconfEncoded := utils.EncodeStringSliceToRESP([]string{"REPLCONF", "listening-port", strconv.Itoa(localPort)})
 	_, err = writer.Write(replconfEncoded)
 	if err != nil {
-		return errors.New("failed to send REPLCONF command: " + err.Error())
+		return fmt.Errorf("failed to send REPLCONF listening-port command: %w", err)
 	}
 
 	res, err = resp.DecodeRESPInputExact(reader, resp.RESPStr)
 	if err != nil {
-		return errors.New("failed to read response from master server: " + err.Error())
+		return fmt.Errorf("failed to read response from master server: %w", err)
 	}
 	if val, ok := res.GetStringValue(); !ok || val != "OK" {
 		return errors.New("unexpected response from master server, expected 'OK', got: " + val)
@@ -207,12 +207,12 @@ func initRepHandshake(appState *state.AppState, reader *bufio.Reader, writer io.
 	replconfEncoded = utils.EncodeStringSliceToRESP([]string{"REPLCONF", "capa", "psync2"})
 	_, err = writer.Write(replconfEncoded)
 	if err != nil {
-		return errors.New("failed to send REPLCONF capa command: " + err.Error())
+		return fmt.Errorf("failed to send REPLCONF capa command: %w", err)
 	}
 
 	res, err = resp.DecodeRESPInputExact(reader, resp.RESPStr)
 	if err != nil {
-		return errors.New("failed to read response from master server: " + err.Error())
+		return fmt.Errorf("failed to read response from master server: %w", err)
 	}
 	if val, ok := res.GetStringValue(); !ok || val != "OK" {
 		return errors.New("unexpected response from master server, expected 'OK', got: " + val)
@@ -221,11 +221,11 @@ func initRepHandshake(appState *state.AppState, reader *bufio.Reader, writer io.
 	psyncEncoded := utils.EncodeStringSliceToRESP([]string{"PSYNC", "?", "-1"})
 	_, err = writer.Write(psyncEncoded)
 	if err != nil {
-		return errors.New("failed to send PSYNC command: " + err.Error())
+		return fmt.Errorf("failed to send PSYNC command: %w", err)
 	}
 	res, err = resp.DecodeRESPInputExact(reader, resp.RESPStr)
 	if err != nil {
-		return errors.New("failed to read response from master server: " + err.Error())
+		return fmt.Errorf("failed to read response from master server: %w", err)
 	}
 
 	content, ok := res.GetStringValue()
@@ -257,21 +257,35 @@ func initRepHandshake(appState *state.AppState, reader *bufio.Reader, writer io.
 		s.ReplicationOffset = repOffset
 	})
 
-	res, err = resp.DecodeRESPInputExact(reader, resp.RESPBulkStr)
+	flag, err := reader.ReadByte()
 	if err != nil {
-		return errors.New("failed to read RDB file from master server: " + err.Error())
+		return fmt.Errorf("failed to read RDB file length: %w", err)
+	}
+	if flag != '$' {
+		return errors.New("unexpected response from master server when reading RDB file length, expected '$', got: " + string(flag))
 	}
 
-	rdbByteStr, ok := res.GetBulkStringValue()
-	if !ok {
-		return errors.New("unexpected response from master server, expected bulk string, got: " + res.GetType())
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("failed to read RDB file length: %w", err)
 	}
 
-	if rdbByteStr == nil || len(*rdbByteStr) == 0 {
-		return errors.New("received empty RDB bytes from master server")
+	rdbLen, err := strconv.Atoi(strings.TrimSuffix(line, "\r\n"))
+	if err != nil {
+		return fmt.Errorf("invalid RDB file length: %w", err)
 	}
 
-	r := bytes.NewReader([]byte(*rdbByteStr))
+	if rdbLen <= 0 {
+		return errors.New("invalid RDB file length, must be greater than 0")
+	}
+
+	rdbBytes := make([]byte, rdbLen)
+	_, err = io.ReadFull(reader, rdbBytes)
+	if err != nil {
+		return fmt.Errorf("failed to read RDB file: %w", err)
+	}
+
+	r := bytes.NewReader(rdbBytes)
 	rdbData, err := rdb.ParseRDB(r)
 
 	store := rdbData.MapToStore()
