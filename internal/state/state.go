@@ -84,8 +84,10 @@ func (s *AppState) RemoveReplica(conn *net.TCPConn) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	delete(s.replicas, conn)
-	fmt.Printf("Replica disconnected: %s\n", conn.RemoteAddr().String())
+	if _, exists := s.replicas[conn]; exists {
+		delete(s.replicas, conn)
+		fmt.Printf("Replica disconnected: %s\n", conn.RemoteAddr().String())
+	}
 }
 
 func (s *AppState) IterateReplicas(f func(conn io.Writer)) {

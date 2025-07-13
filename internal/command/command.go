@@ -139,10 +139,12 @@ func RunCommand(appState *state.AppState, cmd Command, writer io.Writer) error {
 			return err
 		}
 
-		if commandType != cmdTypeWrite || !cmd.Propagated {
-			err := writeResponse(writer, bytes)
-			if err != nil {
-				return err
+		if cmd.Name == REPLCONF || !cmd.Propagated {
+			if len(bytes) > 0 {
+				err := writeResponse(writer, bytes)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	} else {
@@ -171,6 +173,7 @@ func RunCommand(appState *state.AppState, cmd Command, writer io.Writer) error {
 
 func writeResponse(writer io.Writer, response []byte) error {
 	_, err := writer.Write(response)
+	// fmt.Println("Response written:", string(response))
 	if err != nil {
 		return fmt.Errorf("failed to write response: %w", err)
 	}

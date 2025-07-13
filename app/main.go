@@ -140,7 +140,11 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 }
 
 func serveMaster(state *state.AppState, conn net.Conn, reader *bufio.Reader) {
-	defer conn.Close()
+	defer func() {
+		defer conn.Close()
+		fmt.Println("Master connection closed")
+	}()
+
 	for {
 		respVal, err := resp.DecodeRESPInputExact(reader, resp.RESPArr)
 		if err != nil {
@@ -149,7 +153,7 @@ func serveMaster(state *state.AppState, conn net.Conn, reader *bufio.Reader) {
 				return
 			}
 
-			// fmt.Printf("Error reading command from master: %s\n", err.Error())
+			fmt.Printf("Error reading from master: %s\n", err.Error())
 			continue
 		}
 
