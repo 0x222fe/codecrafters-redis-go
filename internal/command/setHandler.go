@@ -43,5 +43,5 @@ func setHandler(appState *state.AppState, args []string) ([]byte, error) {
 
 	appState.GetStore().Set(args[0], args[1], expireAt)
 
-	return resp.NewRESPString("+OK").Encode(), nil
+	return resp.NewRESPString("OK").Encode(), nil
 }
