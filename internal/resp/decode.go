@@ -8,7 +8,27 @@ import (
 	"strings"
 )
 
-func DecodeRESPInput(reader *bufio.Reader) (RESPValue, error) {
+func DecodeRESPInput(r *bufio.Reader) (val RESPValue, bytes int, err error) {
+	reader := newCountingReader(r)
+	val, err = decodeRESPInput(reader)
+	if err != nil {
+		return RESPValue{}, 0, err
+	}
+	return val, reader.count, nil
+}
+
+func DecodeRESPInputExact(r *bufio.Reader, valType respValueType) (val RESPValue, bytes int, err error) {
+	reader := newCountingReader(r)
+
+	val, err = decodeRESPInputExact(reader, valType)
+
+	if err != nil {
+		return RESPValue{}, 0, err
+	}
+	return val, reader.count, nil
+}
+
+func decodeRESPInput(reader *countingReader) (RESPValue, error) {
 	flag, err := reader.Peek(1)
 	if err != nil {
 		return RESPValue{}, err
@@ -28,7 +48,7 @@ func DecodeRESPInput(reader *bufio.Reader) (RESPValue, error) {
 	}
 }
 
-func DecodeRESPInputExact(reader *bufio.Reader, valType respValueType) (RESPValue, error) {
+func decodeRESPInputExact(reader *countingReader, valType respValueType) (RESPValue, error) {
 	switch valType {
 	case RESPStr:
 		return parseStr(reader)
@@ -43,7 +63,7 @@ func DecodeRESPInputExact(reader *bufio.Reader, valType respValueType) (RESPValu
 	}
 }
 
-func parseStr(reader *bufio.Reader) (RESPValue, error) {
+func parseStr(reader *countingReader) (RESPValue, error) {
 	flag, err := reader.ReadByte()
 	if err != nil {
 		return RESPValue{}, err
@@ -59,7 +79,7 @@ func parseStr(reader *bufio.Reader) (RESPValue, error) {
 	return NewRESPString(s), nil
 }
 
-func parseBulkStr(reader *bufio.Reader) (RESPValue, error) {
+func parseBulkStr(reader *countingReader) (RESPValue, error) {
 	flag, err := reader.ReadByte()
 	if err != nil {
 		return RESPValue{}, err
@@ -91,7 +111,7 @@ func parseBulkStr(reader *bufio.Reader) (RESPValue, error) {
 	return NewRESPBulkString(&s), nil
 }
 
-func parseInt(reader *bufio.Reader) (RESPValue, error) {
+func parseInt(reader *countingReader) (RESPValue, error) {
 	flag, err := reader.ReadByte()
 	if err != nil {
 		return RESPValue{}, err
@@ -111,7 +131,7 @@ func parseInt(reader *bufio.Reader) (RESPValue, error) {
 	return NewRESPInt(i), nil
 }
 
-func parseArray(reader *bufio.Reader) (RESPValue, error) {
+func parseArray(reader *countingReader) (RESPValue, error) {
 	flag, err := reader.ReadByte()
 
 	if err != nil {
@@ -136,7 +156,7 @@ func parseArray(reader *bufio.Reader) (RESPValue, error) {
 
 	arr := make([]RESPValue, length)
 	for i := range length {
-		v, err := DecodeRESPInput(reader)
+		v, err := decodeRESPInput(reader)
 		if err != nil {
 			return RESPValue{}, err
 		}

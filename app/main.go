@@ -112,7 +112,7 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 	reader := bufio.NewReader(conn)
 
 	for {
-		respVal, err := resp.DecodeRESPInputExact(reader, resp.RESPArr)
+		respVal, _, err := resp.DecodeRESPInputExact(reader, resp.RESPArr)
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println("Client disconnected")
@@ -139,14 +139,14 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 	}
 }
 
-func serveMaster(state *state.AppState, conn net.Conn, reader *bufio.Reader) {
+func serveMaster(appState *state.AppState, conn net.Conn, reader *bufio.Reader) {
 	defer func() {
 		defer conn.Close()
 		fmt.Println("Master connection closed")
 	}()
 
 	for {
-		respVal, err := resp.DecodeRESPInputExact(reader, resp.RESPArr)
+		respVal, bytesRead, err := resp.DecodeRESPInputExact(reader, resp.RESPArr)
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println("Lost connection to master")
@@ -166,11 +166,15 @@ func serveMaster(state *state.AppState, conn net.Conn, reader *bufio.Reader) {
 
 		cmd.Propagated = true
 
-		err = command.RunCommand(state, cmd, conn)
+		err = command.RunCommand(appState, cmd, conn)
 		if err != nil {
 			fmt.Printf("Error executing command from master: %s\n", err.Error())
 			continue
 		}
+
+		appState.WriteState(func(s *state.State) {
+			s.ReplicationOffset += bytesRead
+		})
 	}
 }
 
@@ -181,7 +185,7 @@ func initRepHandshake(appState *state.AppState, reader *bufio.Reader, writer io.
 		return fmt.Errorf("failed to send PING command: %w", err)
 	}
 
-	res, err := resp.DecodeRESPInputExact(reader, resp.RESPStr)
+	res, _, err := resp.DecodeRESPInputExact(reader, resp.RESPStr)
 	if err != nil {
 		return fmt.Errorf("failed to read response from master server: %w", err)
 	}
@@ -196,7 +200,7 @@ func initRepHandshake(appState *state.AppState, reader *bufio.Reader, writer io.
 		return fmt.Errorf("failed to send REPLCONF listening-port command: %w", err)
 	}
 
-	res, err = resp.DecodeRESPInputExact(reader, resp.RESPStr)
+	res, _, err = resp.DecodeRESPInputExact(reader, resp.RESPStr)
 	if err != nil {
 		return fmt.Errorf("failed to read response from master server: %w", err)
 	}
@@ -210,7 +214,7 @@ func initRepHandshake(appState *state.AppState, reader *bufio.Reader, writer io.
 		return fmt.Errorf("failed to send REPLCONF capa command: %w", err)
 	}
 
-	res, err = resp.DecodeRESPInputExact(reader, resp.RESPStr)
+	res, _, err = resp.DecodeRESPInputExact(reader, resp.RESPStr)
 	if err != nil {
 		return fmt.Errorf("failed to read response from master server: %w", err)
 	}
@@ -223,7 +227,7 @@ func initRepHandshake(appState *state.AppState, reader *bufio.Reader, writer io.
 	if err != nil {
 		return fmt.Errorf("failed to send PSYNC command: %w", err)
 	}
-	res, err = resp.DecodeRESPInputExact(reader, resp.RESPStr)
+	res, _, err = resp.DecodeRESPInputExact(reader, resp.RESPStr)
 	if err != nil {
 		return fmt.Errorf("failed to read response from master server: %w", err)
 	}
