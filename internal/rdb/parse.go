@@ -5,12 +5,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"hash"
 	"io"
 	"os"
 	"strconv"
-
-	"github.com/0x222fe/codecrafters-redis-go/pkg/crc64"
 )
 
 func ReadRDBFile(filename string) (*RDB, error) {
@@ -27,10 +24,8 @@ func ReadRDBFile(filename string) (*RDB, error) {
 }
 
 func ParseRDB(r io.Reader) (*RDB, error) {
-	crc := crc64.New()
-
-	tee := io.TeeReader(r, crc)
-	reader := bufio.NewReader(tee)
+	fmt.Println("Parsing RDB file...")
+	reader := newCRCReader(r)
 
 	rdb := &RDB{
 		metadata:  make(map[string]string),
@@ -49,15 +44,16 @@ func ParseRDB(r io.Reader) (*RDB, error) {
 		return nil, fmt.Errorf("database parsing error: %v", err)
 	}
 
-	err := parseEnd(reader, crc)
+	err := parseEnd(reader)
 	if err != nil {
 		return nil, fmt.Errorf("end parsing error: %v", err)
 	}
 
+	fmt.Println("RDB file parsed successfully")
 	return rdb, nil
 }
 
-func parseHeader(reader *bufio.Reader, rdb *RDB) error {
+func parseHeader(reader *crcReader, rdb *RDB) error {
 	header := make([]byte, 9)
 	if _, err := io.ReadFull(reader, header); err != nil {
 		return err
@@ -71,7 +67,7 @@ func parseHeader(reader *bufio.Reader, rdb *RDB) error {
 	return nil
 }
 
-func parseMeta(reader *bufio.Reader, rdb *RDB) error {
+func parseMeta(reader *crcReader, rdb *RDB) error {
 	for {
 		flag, err := reader.Peek(1)
 		if err != nil {
@@ -98,7 +94,7 @@ func parseMeta(reader *bufio.Reader, rdb *RDB) error {
 	}
 }
 
-func parseDatabase(reader *bufio.Reader, rdb *RDB) error {
+func parseDatabase(reader *crcReader, rdb *RDB) error {
 	for {
 		flag, err := reader.Peek(1)
 		if err != nil {
@@ -168,7 +164,7 @@ func parseDatabase(reader *bufio.Reader, rdb *RDB) error {
 	}
 }
 
-func parseKeyValue(reader *bufio.Reader, db *database, hashSize, expirySize int) error {
+func parseKeyValue(reader *crcReader, db *database, hashSize, expirySize int) error {
 
 	expCount := 0
 	for range hashSize {
@@ -242,7 +238,7 @@ func parseKeyValue(reader *bufio.Reader, db *database, hashSize, expirySize int)
 	return nil
 }
 
-func parseEnd(reader *bufio.Reader, crc hash.Hash64) error {
+func parseEnd(reader *crcReader) error {
 	flag, err := reader.ReadByte()
 	if err != nil {
 		return err
@@ -251,8 +247,7 @@ func parseEnd(reader *bufio.Reader, crc hash.Hash64) error {
 	if flag != endFlag {
 		return fmt.Errorf("expected end flag, got 0x%02X", flag)
 	}
-
-	calculatedChecksum := crc.Sum64()
+	calculatedChecksum := reader.crc.Sum64()
 
 	checksumBytes := make([]byte, 8)
 	if _, err := io.ReadFull(reader, checksumBytes); err != nil {
@@ -265,6 +260,8 @@ func parseEnd(reader *bufio.Reader, crc hash.Hash64) error {
 		return fmt.Errorf("checksum mismatch: calculated %x, expected %x", calculatedChecksum, checksum)
 	}
 
+	fmt.Println("RDB checksum validated")
+
 	_, err = reader.ReadByte()
 	if err == io.EOF {
 		return nil
@@ -276,7 +273,7 @@ func parseEnd(reader *bufio.Reader, crc hash.Hash64) error {
 	return fmt.Errorf("expected EOF after checksum, but found extra data")
 }
 
-func readEncodedSize(reader *bufio.Reader) (int, error) {
+func readEncodedSize(reader *crcReader) (int, error) {
 	firstByte, err := reader.ReadByte()
 	if err != nil {
 		return 0, err
@@ -309,7 +306,7 @@ func readEncodedSize(reader *bufio.Reader) (int, error) {
 	}
 }
 
-func readEncodedString(reader *bufio.Reader) (string, error) {
+func readEncodedString(reader *crcReader) (string, error) {
 	b, err := reader.ReadByte()
 	if err != nil {
 		return "", err
