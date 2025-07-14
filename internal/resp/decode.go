@@ -1,16 +1,15 @@
 package resp
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
-
-	"github.com/0x222fe/codecrafters-redis-go/internal/cnn"
 )
 
-func DecodeRESPInput(conn *cnn.Connection) (val RESPValue, bytes int, err error) {
-	reader := newCountingReader(conn)
+func DecodeRESPInput(r *bufio.Reader) (val RESPValue, bytes int, err error) {
+	reader := newCountingReader(r)
 	val, err = decodeRESPInput(reader)
 	if err != nil {
 		return RESPValue{}, 0, err
@@ -18,8 +17,8 @@ func DecodeRESPInput(conn *cnn.Connection) (val RESPValue, bytes int, err error)
 	return val, reader.count, nil
 }
 
-func DecodeRESPInputExact(conn *cnn.Connection, valType respValueType) (val RESPValue, bytes int, err error) {
-	reader := newCountingReader(conn)
+func DecodeRESPInputExact(r *bufio.Reader, valType respValueType) (val RESPValue, bytes int, err error) {
+	reader := newCountingReader(r)
 
 	val, err = decodeRESPInputExact(reader, valType)
 

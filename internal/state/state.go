@@ -4,16 +4,23 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/cnn"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
 	"github.com/0x222fe/codecrafters-redis-go/internal/config"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
+	"github.com/google/uuid"
 )
+
+type Replica struct {
+	Client     *client.Client
+	Offset     int
+	OffsetChan chan int
+}
 
 type AppState struct {
 	mu       sync.RWMutex
 	cfg      *config.Config
 	store    *store.Store
-	replicas map[*cnn.Connection]struct{}
+	replicas map[uuid.UUID]*Replica
 	state    *State
 }
 
@@ -22,7 +29,7 @@ func NewAppState(s *State, cfg *config.Config, store *store.Store) *AppState {
 		cfg:      cfg,
 		store:    store,
 		state:    s,
-		replicas: make(map[*cnn.Connection]struct{}),
+		replicas: make(map[uuid.UUID]*Replica),
 	}
 }
 
@@ -63,33 +70,43 @@ func (s *AppState) ReadCfg() config.Config {
 	return *s.cfg
 }
 
-func (s *AppState) AddReplica(conn *cnn.Connection) {
+func (s *AppState) AddReplica(c *client.Client) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.replicas[conn] = struct{}{}
-	fmt.Printf("Replica connected: %s\n", conn.RemoteAddr().String())
+	s.replicas[c.ID] = &Replica{
+		Client:     c,
+		Offset:     0,
+		OffsetChan: make(chan int, 1),
+	}
+	fmt.Printf("Replica connected: %s\n", c.RemoteAddr().String())
 }
 
-func (s *AppState) RemoveReplica(conn *cnn.Connection) {
+func (s *AppState) RemoveReplica(id uuid.UUID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.replicas[conn]; exists {
-		delete(s.replicas, conn)
-		fmt.Printf("Replica disconnected: %s\n", conn.RemoteAddr().String())
+	if c, exists := s.replicas[id]; exists {
+		delete(s.replicas, id)
+		fmt.Printf("Replica disconnected: %s\n", c.Client.RemoteAddr().String())
 	}
 }
 
-func (s *AppState) IterateReplicas(f func(conn *cnn.Connection)) {
+func (s *AppState) GetReplica(id uuid.UUID) (*Replica, bool) {
 	s.mu.RLock()
-	reps := make([]*cnn.Connection, 0, len(s.replicas))
-	for c := range s.replicas {
-		reps = append(reps, c)
-	}
-	s.mu.RUnlock()
+	defer s.mu.RUnlock()
 
-	for _, c := range reps {
-		f(c)
+	replica, exists := s.replicas[id]
+	return replica, exists
+}
+
+func (s *AppState) GetReplicas() []*Replica {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	reps := make([]*Replica, 0, len(s.replicas))
+	for _, r := range s.replicas {
+		reps = append(reps, r)
 	}
+	return reps
 }

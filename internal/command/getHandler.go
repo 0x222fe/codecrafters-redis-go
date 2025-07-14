@@ -3,21 +3,22 @@ package command
 import (
 	"errors"
 
+	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
-	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
-func getHandler(state *state.AppState, args []string) ([]byte, error) {
+func getHandler(req *request.Request, args []string) error {
 	if len(args) != 1 {
-		return nil, errors.New("Usage: GET <key>")
+		return errors.New("Usage: GET <key>")
 	}
 
-	value, exists := state.GetStore().Get(args[0])
+	var res []byte
+	value, exists := req.State.GetStore().Get(args[0])
 	if !exists {
-		return resp.RESPNilArray.Encode(), nil
+		res = resp.RESPNilArray.Encode()
+	} else {
+		res = resp.NewRESPString(value).Encode()
 	}
 
-	encoded := resp.NewRESPString(value).Encode()
-
-	return encoded, nil
+	return writeResponse(req.Client, res)
 }

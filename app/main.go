@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -11,10 +13,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/cnn"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
 	"github.com/0x222fe/codecrafters-redis-go/internal/command"
 	"github.com/0x222fe/codecrafters-redis-go/internal/config"
 	"github.com/0x222fe/codecrafters-redis-go/internal/rdb"
+	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
@@ -49,9 +52,7 @@ func main() {
 			continue
 		}
 
-		conn := cnn.NewConnection(c)
-
-		go handleConnection(conn, state)
+		go handleConnection(c, state)
 	}
 }
 
@@ -81,40 +82,29 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 		}, cfg, store)
 
 	if isReplica {
-		masterAddr := net.JoinHostPort(cfg.MasterHost, strconv.Itoa(cfg.MasterPort))
-		fmt.Printf("Connecting to master server at %s...\n", masterAddr)
-		c, err := net.Dial("tcp", masterAddr)
+		err = initRepHandshake(state)
 		if err != nil {
-			return nil, errors.New("failed to connect to master server: " + err.Error())
-		}
-
-		conn := cnn.NewConnection(c)
-
-		err = initRepHandshake(state, conn)
-		if err != nil {
-			conn.Close()
 			return nil, fmt.Errorf("failed to initialize replication handshake: %w", err)
 		}
-
-		fmt.Printf("Connected to master server at %s\n", masterAddr)
-
-		go serveMaster(state, conn)
 	}
 
 	return state, nil
 }
 
-func handleConnection(conn *cnn.Connection, state *state.AppState) {
+func handleConnection(conn net.Conn, state *state.AppState) {
 	defer conn.Close()
+	client := client.NewClient(conn)
 	defer func() {
-		state.RemoveReplica(conn)
+		state.RemoveReplica(client.ID)
 	}()
 
+	reader := bufio.NewReader(conn)
+
 	for {
-		respVal, _, err := resp.DecodeRESPInputExact(conn, resp.RESPArr)
+		respVal, _, err := resp.DecodeRESPInputExact(reader, resp.RESPArr)
 		if err != nil {
 			if err == io.EOF {
-				fmt.Println("Client disconnected")
+				fmt.Printf("Connection closed by client: %s\n", conn.RemoteAddr().String())
 				return
 			}
 
@@ -123,14 +113,15 @@ func handleConnection(conn *cnn.Connection, state *state.AppState) {
 		}
 
 		cmd, err := command.FromRESP(respVal)
-
-		fmt.Printf("Received command: %s\n", cmd.Name)
 		if err != nil {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue
 		}
+		fmt.Printf("Received command: %s\n", cmd.Name)
 
-		err = command.RunCommand(state, cmd, conn)
+		req := request.NewRequest(context.Background(), client, state)
+
+		err = command.RunCommand(req, cmd)
 		if err != nil {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue
@@ -138,14 +129,16 @@ func handleConnection(conn *cnn.Connection, state *state.AppState) {
 	}
 }
 
-func serveMaster(appState *state.AppState, conn *cnn.Connection) {
+func serveMaster(appState *state.AppState, conn net.Conn, reader *bufio.Reader) {
 	defer func() {
 		defer conn.Close()
 		fmt.Println("Master connection closed")
 	}()
 
+	client := client.NewClient(conn)
+
 	for {
-		respVal, bytesRead, err := resp.DecodeRESPInputExact(conn, resp.RESPArr)
+		respVal, bytesRead, err := resp.DecodeRESPInputExact(reader, resp.RESPArr)
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println("Lost connection to master")
@@ -157,15 +150,15 @@ func serveMaster(appState *state.AppState, conn *cnn.Connection) {
 		}
 
 		cmd, err := command.FromRESP(respVal)
-		fmt.Println("Received command from master:", cmd.Name)
 		if err != nil {
 			fmt.Printf("Error parsing command from master: %s\n", err.Error())
 			continue
 		}
+		fmt.Println("Received command from master:", cmd.Name)
+		req := request.NewRequest(context.Background(), client, appState)
+		req.Propagated = true
 
-		cmd.Propagated = true
-
-		err = command.RunCommand(appState, cmd, conn)
+		err = command.RunCommand(req, cmd)
 		if err != nil {
 			fmt.Printf("Error executing command from master: %s\n", err.Error())
 			continue
@@ -177,14 +170,33 @@ func serveMaster(appState *state.AppState, conn *cnn.Connection) {
 	}
 }
 
-func initRepHandshake(appState *state.AppState, conn *cnn.Connection) error {
+func initRepHandshake(appState *state.AppState) error {
+	cfg := appState.ReadCfg()
+	masterAddr := net.JoinHostPort(cfg.MasterHost, strconv.Itoa(cfg.MasterPort))
+
+	fmt.Printf("Connecting to master server at %s...\n", masterAddr)
+	conn, err := net.Dial("tcp", masterAddr)
+	if err != nil {
+		return errors.New("failed to connect to master server: " + err.Error())
+	}
+
+	handShakeOk := false
+	defer func() {
+		if !handShakeOk {
+			fmt.Println("Handshake failed, closing connection, %s", conn.RemoteAddr().String())
+			conn.Close()
+		}
+	}()
+
+	reader := bufio.NewReader(conn)
+
 	pingCmd := utils.EncodeStringSliceToRESP([]string{"PING"})
-	_, err := conn.Write(pingCmd)
+	_, err = conn.Write(pingCmd)
 	if err != nil {
 		return fmt.Errorf("failed to send PING command: %w", err)
 	}
 
-	res, _, err := resp.DecodeRESPInputExact(conn, resp.RESPStr)
+	res, _, err := resp.DecodeRESPInputExact(reader, resp.RESPStr)
 	if err != nil {
 		return fmt.Errorf("failed to read response from master server: %w", err)
 	}
@@ -192,14 +204,13 @@ func initRepHandshake(appState *state.AppState, conn *cnn.Connection) error {
 		return errors.New("unexpected response from master server, expected 'PONG', got: " + val)
 	}
 
-	localPort := appState.ReadCfg().Port
-	replconfEncoded := utils.EncodeStringSliceToRESP([]string{"REPLCONF", "listening-port", strconv.Itoa(localPort)})
+	replconfEncoded := utils.EncodeStringSliceToRESP([]string{"REPLCONF", "listening-port", strconv.Itoa(cfg.Port)})
 	_, err = conn.Write(replconfEncoded)
 	if err != nil {
 		return fmt.Errorf("failed to send REPLCONF listening-port command: %w", err)
 	}
 
-	res, _, err = resp.DecodeRESPInputExact(conn, resp.RESPStr)
+	res, _, err = resp.DecodeRESPInputExact(reader, resp.RESPStr)
 	if err != nil {
 		return fmt.Errorf("failed to read response from master server: %w", err)
 	}
@@ -213,7 +224,7 @@ func initRepHandshake(appState *state.AppState, conn *cnn.Connection) error {
 		return fmt.Errorf("failed to send REPLCONF capa command: %w", err)
 	}
 
-	res, _, err = resp.DecodeRESPInputExact(conn, resp.RESPStr)
+	res, _, err = resp.DecodeRESPInputExact(reader, resp.RESPStr)
 	if err != nil {
 		return fmt.Errorf("failed to read response from master server: %w", err)
 	}
@@ -226,7 +237,7 @@ func initRepHandshake(appState *state.AppState, conn *cnn.Connection) error {
 	if err != nil {
 		return fmt.Errorf("failed to send PSYNC command: %w", err)
 	}
-	res, _, err = resp.DecodeRESPInputExact(conn, resp.RESPStr)
+	res, _, err = resp.DecodeRESPInputExact(reader, resp.RESPStr)
 	if err != nil {
 		return fmt.Errorf("failed to read response from master server: %w", err)
 	}
@@ -260,7 +271,7 @@ func initRepHandshake(appState *state.AppState, conn *cnn.Connection) error {
 		s.ReplicationOffset = repOffset
 	})
 
-	flag, err := conn.ReadByte()
+	flag, err := reader.ReadByte()
 	if err != nil {
 		return fmt.Errorf("failed to read RDB file length: %w", err)
 	}
@@ -268,7 +279,7 @@ func initRepHandshake(appState *state.AppState, conn *cnn.Connection) error {
 		return errors.New("unexpected response from master server when reading RDB file length, expected '$', got: " + string(flag))
 	}
 
-	line, err := conn.ReadString('\n')
+	line, err := reader.ReadString('\n')
 	if err != nil {
 		return fmt.Errorf("failed to read RDB file length: %w", err)
 	}
@@ -283,7 +294,7 @@ func initRepHandshake(appState *state.AppState, conn *cnn.Connection) error {
 	}
 
 	rdbBytes := make([]byte, rdbLen)
-	_, err = io.ReadFull(conn, rdbBytes)
+	_, err = io.ReadFull(reader, rdbBytes)
 	if err != nil {
 		return fmt.Errorf("failed to read RDB file: %w", err)
 	}
@@ -293,6 +304,10 @@ func initRepHandshake(appState *state.AppState, conn *cnn.Connection) error {
 
 	store := rdbData.MapToStore()
 	appState.SetStore(store)
+
+	fmt.Printf("Connected to master server at %s\n", masterAddr)
+
+	go serveMaster(appState, conn, reader)
 
 	return nil
 }

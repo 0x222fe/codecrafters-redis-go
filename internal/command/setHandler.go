@@ -7,13 +7,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
-	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
-func setHandler(appState *state.AppState, args []string) ([]byte, error) {
+func setHandler(req *request.Request, args []string) error {
 	if len(args) < 2 {
-		return nil, errors.New("SET requires at least two arguments")
+		return errors.New("SET requires at least two arguments")
 	}
 
 	var expMillis int64
@@ -24,12 +24,12 @@ func setHandler(appState *state.AppState, args []string) ([]byte, error) {
 		case "PX":
 			expMillis, err = strconv.ParseInt(args[3], 10, 64)
 			if err != nil || expMillis < 0 {
-				return nil, fmt.Errorf("invalid expiration time: %w", err)
+				return fmt.Errorf("invalid expiration time: %w", err)
 			}
 		case "EX":
 			expSeconds, err := strconv.ParseInt(args[3], 10, 64)
 			if err != nil || expSeconds < 0 {
-				return nil, fmt.Errorf("invalid expiration time: %w", err)
+				return fmt.Errorf("invalid expiration time: %w", err)
 			}
 			expMillis = expSeconds * 1000
 		}
@@ -41,7 +41,11 @@ func setHandler(appState *state.AppState, args []string) ([]byte, error) {
 		*expireAt = time.Now().Add(time.Duration(expMillis) * time.Millisecond).UnixMilli()
 	}
 
-	appState.GetStore().Set(args[0], args[1], expireAt)
+	req.State.GetStore().Set(args[0], args[1], expireAt)
 
-	return resp.NewRESPString("OK").Encode(), nil
+	if req.Propagated {
+		return nil
+	}
+
+	return writeResponse(req.Client, resp.NewRESPString("OK").Encode())
 }

@@ -4,21 +4,22 @@ import (
 	"errors"
 	"strconv"
 
+	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
-func infoHandler(appState *state.AppState, args []string) ([]byte, error) {
+func infoHandler(req *request.Request, args []string) error {
 	if len(args) == 0 {
-		return nil, errors.New("INFO requires at least one argument")
+		return errors.New("INFO requires at least one argument")
 	}
 
 	if args[0] != "replication" {
-		return nil, errors.New("only 'replication' section is supported")
+		return errors.New("only 'replication' section is supported")
 	}
 
 	isReplica, repID, repOffset := false, "", 0
-	appState.ReadState(func(s state.State) {
+	req.State.ReadState(func(s state.State) {
 		isReplica = s.IsReplica
 		repID = s.ReplicationID
 		repOffset = s.ReplicationOffset
@@ -40,5 +41,5 @@ func infoHandler(appState *state.AppState, args []string) ([]byte, error) {
 
 	encoded := resp.NewRESPBulkString(&info).Encode()
 
-	return encoded, nil
+	return writeResponse(req.Client, encoded)
 }

@@ -2,49 +2,63 @@ package command
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
 )
 
-func replconfHandler(state *state.AppState, args []string) ([]byte, error) {
+func replconfHandler(req *request.Request, args []string) error {
 	if len(args) == 0 {
-		return nil, errors.New("REPLCONF requires at least one argument")
+		return errors.New("REPLCONF requires at least one argument")
 	}
 
 	subcommand := strings.ToUpper(args[0])
 
 	switch subcommand {
 	case "GETACK":
-		return replconfGETACK(state, args[1:])
+		return replconfGETACK(req, args[1:])
 	case "ACK":
-		return replconfACK(state, args[1:])
+		return replconfACK(req, args[1:])
 	default:
-		// return nil, errors.New("Unknown REPLCONF subcommand: " + subcommand)
-		return resp.NewRESPString("OK").Encode(), nil
+		return writeResponse(req.Client, resp.NewRESPString("OK").Encode())
 	}
 }
 
-func replconfGETACK(appState *state.AppState, args []string) ([]byte, error) {
+func replconfGETACK(req *request.Request, args []string) error {
 	if len(args) != 1 {
-		return nil, errors.New("REPLCONF GETACK requires exactly one argument")
+		return errors.New("REPLCONF GETACK requires exactly one argument")
 	}
 
 	offset := 0
-	appState.ReadState(func(s state.State) {
+	req.State.ReadState(func(s state.State) {
 		offset = s.ReplicationOffset
 	})
 
-	return utils.EncodeStringSliceToRESP([]string{"REPLCONF", "ACK", strconv.Itoa(offset)}), nil
+	command := utils.EncodeStringSliceToRESP([]string{"REPLCONF", "ACK", strconv.Itoa(offset)})
+	return writeResponse(req.Client, command)
 }
 
-func replconfACK(state *state.AppState, args []string) ([]byte, error) {
+func replconfACK(req *request.Request, args []string) error {
 	if len(args) != 1 {
-		return nil, errors.New("REPLCONF ACK requires exactly one argument")
+		return errors.New("REPLCONF ACK requires exactly one argument")
+	}
+	offset, err := strconv.Atoi(args[0])
+	if err != nil {
+		return fmt.Errorf("invalid offset: %s", args[0])
 	}
 
-	return nil, nil
+	replica, ok := req.State.GetReplica(req.Client.ID)
+	if !ok {
+		return fmt.Errorf("client is not a replica, %s", req.Client.RemoteAddr().String())
+	}
+
+	replica.Offset = offset
+	replica.OffsetChan <- offset
+
+	return nil
 }

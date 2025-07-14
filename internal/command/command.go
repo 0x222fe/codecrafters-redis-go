@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/cnn"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
@@ -16,19 +17,12 @@ type commandType int
 type Command struct {
 	Name CommandKey
 	Args []string
-	// Wether this command is propagated from master
-	Propagated bool
 }
-type simpleCommandSpec struct {
-	handler simpleHandler
+type commandSpec struct {
+	handler commandHandler
 	cmdType commandType
 }
-type streamCommandSpec struct {
-	handler streamHandler
-	cmdType commandType
-}
-type simpleHandler func(state *state.AppState, args []string) ([]byte, error)
-type streamHandler func(state *state.AppState, args []string, conn *cnn.Connection) error
+type commandHandler func(req *request.Request, args []string) error
 
 type contextKey string
 
@@ -51,10 +45,11 @@ const (
 	INFO     CommandKey = "INFO"
 	REPLCONF CommandKey = "REPLCONF"
 	PSYNC    CommandKey = "PSYNC"
+	WAIT     CommandKey = "WAIT"
 )
 
 var (
-	simpleCommands = map[CommandKey]simpleCommandSpec{
+	commands = map[CommandKey]commandSpec{
 		PING:     {pingHandler, cmdTypeRead},
 		ECHO:     {echoHandler, cmdTypeRead},
 		SET:      {setHandler, cmdTypeWrite},
@@ -63,9 +58,8 @@ var (
 		KEYS:     {keysHandler, cmdTypeRead},
 		INFO:     {infoHandler, cmdTypeRead},
 		REPLCONF: {replconfHandler, cmdTypeRead},
-	}
-	streamCommands = map[CommandKey]streamCommandSpec{
-		PSYNC: {psyncHandler, cmdTypeRead},
+		PSYNC:    {psyncHandler, cmdTypeRead},
+		WAIT:     {waitHandler, cmdTypeRead},
 	}
 )
 
@@ -99,80 +93,53 @@ func FromRESP(v resp.RESPValue) (Command, error) {
 	}
 
 	return Command{
-		Name:       CommandKey(strings.ToUpper(*cmdName)),
-		Args:       args,
-		Propagated: false,
+		Name: CommandKey(strings.ToUpper(*cmdName)),
+		Args: args,
 	}, nil
 }
 
-func RunCommand(appState *state.AppState, cmd Command, conn *cnn.Connection) error {
+func RunCommand(req *request.Request, cmd Command) error {
 	cmdName := string(cmd.Name)
 
-	simpleSpec, findInSimple := simpleCommands[cmd.Name]
-	streamSpec, findInStream := streamCommands[cmd.Name]
-
-	if !findInSimple && !findInStream {
+	spec, find := commands[cmd.Name]
+	if !find {
 		return errors.New("unknown command: " + cmdName)
 	}
 
-	var commandType commandType
-	if findInSimple {
-		commandType = simpleSpec.cmdType
-	} else {
-		commandType = streamSpec.cmdType
+	var isReplica bool
+	req.State.ReadState(func(s state.State) {
+		isReplica = s.IsReplica
+	})
+
+	if spec.cmdType == cmdTypeWrite &&
+		isReplica &&
+		!req.Propagated {
+		return errors.New("replica cannot execute write commands")
 	}
 
-	if commandType == cmdTypeWrite && !cmd.Propagated {
-		var isReplica bool
-		appState.ReadState(func(s state.State) {
-			isReplica = s.IsReplica
-		})
-
-		if isReplica {
-			return errors.New("replica cannot execute write commands")
-		}
+	err := spec.handler(req, cmd.Args)
+	if err != nil {
+		return err
 	}
 
-	if findInSimple {
-		bytes, err := simpleSpec.handler(appState, cmd.Args)
-		if err != nil {
-			return err
-		}
-
-		if cmd.Name == REPLCONF || !cmd.Propagated {
-			if len(bytes) > 0 {
-				err := writeResponse(conn, bytes)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	} else {
-		if cmd.Propagated {
-			return errors.New("stream commands cannot be propagated")
-		}
-
-		err := streamSpec.handler(appState, cmd.Args, conn)
-		if err != nil {
-			return err
-		}
-	}
-
-	if commandType == cmdTypeWrite {
+	if spec.cmdType == cmdTypeWrite && !isReplica {
 		replicaCommand := utils.EncodeStringSliceToRESP(append([]string{cmdName}, cmd.Args...))
 
-		appState.IterateReplicas(func(conn *cnn.Connection) {
-			if _, err := conn.Write(replicaCommand); err != nil {
-				fmt.Printf("failed to propagate command to replica %s: %v\n", conn.RemoteAddr(), err)
+		replicas := req.State.GetReplicas()
+
+		for _, rep := range replicas {
+
+			if _, err := rep.Client.Write(replicaCommand); err != nil {
+				fmt.Printf("failed to propagate command to replica %s: %v\n", rep.Client.RemoteAddr(), err)
 			}
-		})
+		}
 	}
 
 	return nil
 }
 
-func writeResponse(conn *cnn.Connection, response []byte) error {
-	_, err := conn.Write(response)
+func writeResponse(c *client.Client, response []byte) error {
+	_, err := c.Write(response)
 	if err != nil {
 		return fmt.Errorf("failed to write response: %w", err)
 	}

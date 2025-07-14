@@ -3,22 +3,22 @@ package command
 import (
 	"errors"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/state"
+	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
 )
 
-func keysHandler(state *state.AppState, args []string) ([]byte, error) {
+func keysHandler(req *request.Request, args []string) error {
 	if len(args) == 0 {
-		return nil, errors.New("keys requires at least one argument")
+		return errors.New("keys requires at least one argument")
 	}
 
 	if args[0] != "*" {
-		return nil, errors.New("only wildcard '*' is supported")
+		return errors.New("only wildcard '*' is supported")
 	}
 
-	keys := state.GetStore().Keys()
+	keys := req.State.GetStore().Keys()
 
-	result := utils.EncodeStringSliceToRESP(keys)
+	res := utils.EncodeStringSliceToRESP(keys)
 
-	return result, nil
+	return writeResponse(req.Client, res)
 }
