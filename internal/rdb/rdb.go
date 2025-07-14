@@ -20,7 +20,7 @@ type database struct {
 type keyValue struct {
 	key       string
 	value     string
-	valueType byte
+	valueType store.ValueType
 	expireAt  *int64
 }
 
@@ -41,7 +41,7 @@ func (rdb *RDB) MapToStore() *store.Store {
 
 	for _, db := range rdb.databases {
 		for _, kv := range db.items {
-			s.Set(kv.key, kv.value, kv.expireAt)
+			s.Set(kv.key, kv.value, kv.valueType, kv.expireAt)
 		}
 	}
 	return s

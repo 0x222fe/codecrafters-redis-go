@@ -9,56 +9,19 @@ import (
 )
 
 type Client struct {
-	ID   uuid.UUID
-	mu   sync.Mutex
-	conn net.Conn
-	// reader *bufio.Reader
+	ID     uuid.UUID
+	mu     sync.Mutex
+	conn   net.Conn
 	writer *bufio.Writer
 }
 
 func NewClient(c net.Conn) *Client {
 	return &Client{
-		ID:   uuid.New(),
-		conn: c,
-		// reader: bufio.NewReader(c),
+		ID:     uuid.New(),
+		conn:   c,
 		writer: bufio.NewWriter(c),
 	}
 }
-
-// func (r *Client) Peek(n int) ([]byte, error) {
-// 	r.mu.Lock()
-// 	reader := r.reader
-// 	r.mu.Unlock()
-// 	return reader.Peek(n)
-// }
-//
-// func (r *Client) Read(p []byte) (int, error) {
-// 	r.mu.Lock()
-// 	reader := r.reader
-// 	r.mu.Unlock()
-// 	return reader.Read(p)
-// }
-//
-// func (r *Client) ReadByte() (byte, error) {
-// 	r.mu.Lock()
-// 	reader := r.reader
-// 	r.mu.Unlock()
-// 	return reader.ReadByte()
-// }
-//
-// func (r *Client) ReadString(delim byte) (string, error) {
-// 	r.mu.Lock()
-// 	reader := r.reader
-// 	r.mu.Unlock()
-// 	return reader.ReadString(delim)
-// }
-//
-// func (r *Client) Discard(n int) (int, error) {
-// 	r.mu.Lock()
-// 	reader := r.reader
-// 	r.mu.Unlock()
-// 	return reader.Discard(n)
-// }
 
 func (r *Client) Write(p []byte) (int, error) {
 	r.mu.Lock()

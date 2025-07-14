@@ -46,6 +46,7 @@ const (
 	REPLCONF CommandKey = "REPLCONF"
 	PSYNC    CommandKey = "PSYNC"
 	WAIT     CommandKey = "WAIT"
+	TYPE     CommandKey = "TYPE"
 )
 
 var (
@@ -60,6 +61,7 @@ var (
 		REPLCONF: {replconfHandler, cmdTypeRead},
 		PSYNC:    {psyncHandler, cmdTypeRead},
 		WAIT:     {waitHandler, cmdTypeRead},
+		TYPE:     {typeHandler, cmdTypeRead},
 	}
 )
 

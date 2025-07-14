@@ -9,6 +9,7 @@ import (
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
+	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 )
 
 func setHandler(req *request.Request, args []string) error {
@@ -41,7 +42,7 @@ func setHandler(req *request.Request, args []string) error {
 		*expireAt = time.Now().Add(time.Duration(expMillis) * time.Millisecond).UnixMilli()
 	}
 
-	req.State.GetStore().Set(args[0], args[1], expireAt)
+	req.State.GetStore().Set(args[0], args[1], store.String, expireAt)
 
 	if req.Propagated {
 		return nil

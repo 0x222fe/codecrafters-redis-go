@@ -8,6 +8,8 @@ import (
 	"io"
 	"os"
 	"strconv"
+
+	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 )
 
 func ReadRDBFile(filename string) (*RDB, error) {
@@ -221,10 +223,16 @@ func parseKeyValue(reader *crcReader, db *database, hashSize, expirySize int) er
 		if err != nil {
 			return err
 		}
+
+		valType, err := rdbTypeToValueType(typeByte)
+		if err != nil {
+			return fmt.Errorf("unknown RDB type byte 0x%02X for key '%s': %v", typeByte, key, err)
+		}
+
 		kv := &keyValue{
 			key:       key,
 			value:     val,
-			valueType: typeByte,
+			valueType: valType,
 			expireAt:  expiryAt,
 		}
 
@@ -351,4 +359,23 @@ func readEncodedString(reader *crcReader) (string, error) {
 		}
 	}
 	return string(bytes), nil
+}
+
+func rdbTypeToValueType(typeByte byte) (store.ValueType, error) {
+	switch typeByte {
+	case 0x00:
+		return store.String, nil
+	case 0x01:
+		return store.List, nil
+	case 0x02:
+		return store.Set, nil
+	case 0x03:
+		return store.ZSet, nil
+	case 0x04:
+		return store.Hash, nil
+	case 0x09:
+		return store.Stream, nil
+	default:
+		return store.None, fmt.Errorf("unknown RDB type byte: 0x%02X", typeByte)
+	}
 }
