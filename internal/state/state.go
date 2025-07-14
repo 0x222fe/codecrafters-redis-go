@@ -1,6 +1,7 @@
 package state
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -14,6 +15,8 @@ type Replica struct {
 	Client     *client.Client
 	Offset     int
 	OffsetChan chan int
+	Ctx        context.Context
+	Cancel     context.CancelFunc
 }
 
 type AppState struct {
@@ -74,10 +77,14 @@ func (s *AppState) AddReplica(c *client.Client) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	s.replicas[c.ID] = &Replica{
 		Client:     c,
 		Offset:     0,
 		OffsetChan: make(chan int, 1),
+		Ctx:        ctx,
+		Cancel:     cancel,
 	}
 	fmt.Printf("Replica connected: %s\n", c.RemoteAddr().String())
 }
@@ -86,9 +93,11 @@ func (s *AppState) RemoveReplica(id uuid.UUID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if c, exists := s.replicas[id]; exists {
+	if r, exists := s.replicas[id]; exists {
+		r.Cancel()
+
 		delete(s.replicas, id)
-		fmt.Printf("Replica disconnected: %s\n", c.Client.RemoteAddr().String())
+		fmt.Printf("Replica disconnected: %s\n", r.Client.RemoteAddr().String())
 	}
 }
 

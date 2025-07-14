@@ -183,7 +183,7 @@ func initRepHandshake(appState *state.AppState) error {
 	handShakeOk := false
 	defer func() {
 		if !handShakeOk {
-			fmt.Println("Handshake failed, closing connection, %s", conn.RemoteAddr().String())
+			fmt.Printf("Handshake failed, closing connection, %s\n", conn.RemoteAddr().String())
 			conn.Close()
 		}
 	}()
@@ -307,6 +307,7 @@ func initRepHandshake(appState *state.AppState) error {
 
 	fmt.Printf("Connected to master server at %s\n", masterAddr)
 
+	handShakeOk = true
 	go serveMaster(appState, conn, reader)
 
 	return nil

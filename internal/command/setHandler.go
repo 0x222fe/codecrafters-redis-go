@@ -46,6 +46,5 @@ func setHandler(req *request.Request, args []string) error {
 	if req.Propagated {
 		return nil
 	}
-
 	return writeResponse(req.Client, resp.NewRESPString("OK").Encode())
 }

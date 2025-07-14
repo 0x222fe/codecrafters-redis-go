@@ -140,6 +140,7 @@ func RunCommand(req *request.Request, cmd Command) error {
 
 func writeResponse(c *client.Client, response []byte) error {
 	_, err := c.Write(response)
+	fmt.Printf("Response sent to %s: %q\n", c.RemoteAddr(), string(response))
 	if err != nil {
 		return fmt.Errorf("failed to write response: %w", err)
 	}

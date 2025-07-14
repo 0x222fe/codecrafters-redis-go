@@ -6,5 +6,8 @@ import (
 )
 
 func pingHandler(req *request.Request, args []string) error {
+	if req.Propagated {
+		return nil
+	}
 	return writeResponse(req.Client, resp.NewRESPString("PONG").Encode())
 }
