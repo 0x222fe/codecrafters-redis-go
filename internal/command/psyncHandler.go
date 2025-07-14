@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
@@ -19,13 +20,14 @@ func psyncHandler(req *request.Request, args []string) error {
 		return errors.New("PSYNC only supports ? -1 for now")
 	}
 
-	var replicationID string
+	replicationID, replicationOffset := "", 0
 
 	req.State.ReadState(func(s state.State) {
 		replicationID = s.ReplicationID
+		replicationOffset = s.ReplicationOffset
 	})
 
-	psyncMsg := resp.NewRESPString("FULLRESYNC " + replicationID + " " + "0").Encode()
+	psyncMsg := resp.NewRESPString("FULLRESYNC " + replicationID + " " + strconv.Itoa(replicationOffset)).Encode()
 
 	err := writeResponse(req.Client, psyncMsg)
 	if err != nil {

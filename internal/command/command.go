@@ -125,10 +125,13 @@ func RunCommand(req *request.Request, cmd Command) error {
 	if spec.cmdType == cmdTypeWrite && !isReplica {
 		replicaCommand := utils.EncodeStringSliceToRESP(append([]string{cmdName}, cmd.Args...))
 
+		req.State.WriteState(func(s *state.State) {
+			s.ReplicationOffset += len(replicaCommand)
+		})
+
 		replicas := req.State.GetReplicas()
 
 		for _, rep := range replicas {
-
 			if _, err := rep.Client.Write(replicaCommand); err != nil {
 				fmt.Printf("failed to propagate command to replica %s: %v\n", rep.Client.RemoteAddr(), err)
 			}
