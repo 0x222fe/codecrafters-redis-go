@@ -4,10 +4,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-immutable-radix/v2"
+	iradix "github.com/hashicorp/go-immutable-radix/v2"
 )
 
 type RedisStream struct {
@@ -60,73 +62,73 @@ func (stream *RedisStream) GetItem(idStr string) (*StreamEntry, bool) {
 }
 
 func (stream *RedisStream) AddEntry(idStr string, fields map[string]string) (StreamEntryID, error) {
-	if idStr != "*" {
-		id, err := parseStreamEntryID(idStr)
-		if err != nil {
-			return StreamEntryID{}, fmt.Errorf("invalid stream entry ID: %s", err)
-		}
+	millisP, seqP, err := validateStreamEntryIDInput(idStr)
+	if err != nil {
+		return StreamEntryID{}, fmt.Errorf("invalid stream entry ID: %s", err)
+	}
 
-		if id.millis == 0 && id.sequence == 0 {
+	stream.mu.Lock()
+	defer stream.mu.Unlock()
+
+	var millis, seq uint64
+	_, top, ok := stream.tree.Root().Maximum()
+	switch {
+	case millisP == nil && seqP == nil:
+		if ok {
+			millis = top.id.millis
+			seq = top.id.sequence + 1
+		} else {
+			millis = uint64(time.Now().UnixMilli())
+			seq = 0
+		}
+	case millisP != nil && seqP == nil:
+		millis = *millisP
+		if ok {
+			if millis < top.id.millis {
+				return StreamEntryID{}, errors.New("The ID specified in XADD is equal or smaller than the target stream top item")
+			}
+
+			if millis == top.id.millis {
+				seq = top.id.sequence + 1
+			} else {
+				seq = 0
+			}
+		} else {
+			if millis == 0 {
+				seq = 1
+			} else {
+				seq = 0
+			}
+		}
+	case millisP != nil && seqP != nil:
+		millis = *millisP
+		seq = *seqP
+		if millis == 0 && seq == 0 {
 			return StreamEntryID{}, errors.New("The ID specified in XADD must be greater than 0-0")
 		}
 
-		prefix := make([]byte, 8)
-		binary.BigEndian.PutUint64(prefix[:8], uint64(id.millis))
-
-		stream.mu.Lock()
-		defer stream.mu.Unlock()
-
-		_, m, ok := stream.tree.Root().Maximum()
 		if ok {
-			if (m.id.millis > id.millis) ||
-				(m.id.millis == id.millis && m.id.sequence >= id.sequence) {
-
+			if millis < top.id.millis || (millis == top.id.millis && seq <= top.id.sequence) {
 				return StreamEntryID{}, errors.New("The ID specified in XADD is equal or smaller than the target stream top item")
 			}
 		}
-		entry := &StreamEntry{
-			id:     id,
-			fields: fields,
-		}
-
-		t, _, _ := stream.tree.Insert(id.radixKey(), entry)
-		stream.tree = t
-		return id, nil
+	default:
+		return StreamEntryID{}, errors.New("invalid ID input")
 	}
 
-	millis := uint64(time.Now().UnixMilli())
 	key := make([]byte, 16)
 	binary.BigEndian.PutUint64(key[:8], millis)
-
-	maxSeq := uint64(0)
-	stream.mu.Lock()
-	defer stream.mu.Unlock()
-	stream.tree.Root().WalkPrefix(key, func(k []byte, v *StreamEntry) bool {
-		candidate := binary.BigEndian.Uint64(k[8:])
-		if candidate > maxSeq {
-			maxSeq = candidate
-		}
-		return false
-	})
-	seq := maxSeq + 1
 	binary.BigEndian.PutUint64(key[8:], seq)
 
 	entry := &StreamEntry{
-		id: StreamEntryID{
-			millis:   millis,
-			sequence: seq,
-		},
+		id:     StreamEntryID{millis: millis, sequence: seq},
 		fields: fields,
 	}
 
-	tree, _, ok := stream.tree.Insert(key, entry)
-	if !ok {
-		return StreamEntryID{}, fmt.Errorf("insert failed")
-	}
-
+	tree, _, _ := stream.tree.Insert(key, entry)
 	stream.tree = tree
 
-	return StreamEntryID{millis: millis, sequence: seq}, nil
+	return entry.id, nil
 }
 
 func parseStreamEntryID(str string) (StreamEntryID, error) {
@@ -136,4 +138,29 @@ func parseStreamEntryID(str string) (StreamEntryID, error) {
 		return StreamEntryID{}, fmt.Errorf("invalid stream entry ID format: %s", str)
 	}
 	return StreamEntryID{millis: millis, sequence: sequence}, nil
+}
+
+func validateStreamEntryIDInput(id string) (*uint64, *uint64, error) {
+	id = strings.TrimSpace(id)
+	if id == "*" {
+		return nil, nil, nil
+	}
+
+	parts := strings.Split(id, "-")
+	if len(parts) == 2 {
+		millis, err := strconv.ParseUint(parts[0], 10, 64)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid millis part: %w", err)
+		}
+		if parts[1] == "*" {
+			return &millis, nil, nil
+		}
+		seq, err := strconv.ParseUint(parts[1], 10, 64)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid sequence part: %w", err)
+		}
+		return &millis, &seq, nil
+	}
+
+	return nil, nil, errors.New("invalid format")
 }
