@@ -62,10 +62,10 @@ func (stream *RedisStream) GetItem(idStr string) (*StreamEntry, bool) {
 	return entry, true
 }
 
-func (stream *RedisStream) AddEntry(idStr string, fields map[string]string) (StreamEntryID, error) {
+func (stream *RedisStream) AddEntry(idStr string, fields map[string]string) (*StreamEntry, error) {
 	millisP, seqP, err := validateStreamEntryIDInput(idStr)
 	if err != nil {
-		return StreamEntryID{}, fmt.Errorf("invalid stream entry ID: %s", err)
+		return nil, fmt.Errorf("invalid stream entry ID: %s", err)
 	}
 
 	stream.mu.Lock()
@@ -86,7 +86,7 @@ func (stream *RedisStream) AddEntry(idStr string, fields map[string]string) (Str
 		millis = *millisP
 		if ok {
 			if millis < top.ID.Millis {
-				return StreamEntryID{}, errors.New("The ID specified in XADD is equal or smaller than the target stream top item")
+				return nil, errors.New("The ID specified in XADD is equal or smaller than the target stream top item")
 			}
 
 			if millis == top.ID.Millis {
@@ -105,16 +105,16 @@ func (stream *RedisStream) AddEntry(idStr string, fields map[string]string) (Str
 		millis = *millisP
 		seq = *seqP
 		if millis == 0 && seq == 0 {
-			return StreamEntryID{}, errors.New("The ID specified in XADD must be greater than 0-0")
+			return nil, errors.New("The ID specified in XADD must be greater than 0-0")
 		}
 
 		if ok {
 			if millis < top.ID.Millis || (millis == top.ID.Millis && seq <= top.ID.Seq) {
-				return StreamEntryID{}, errors.New("The ID specified in XADD is equal or smaller than the target stream top item")
+				return nil, errors.New("The ID specified in XADD is equal or smaller than the target stream top item")
 			}
 		}
 	default:
-		return StreamEntryID{}, errors.New("invalid ID input")
+		return nil, errors.New("invalid ID input")
 	}
 
 	key := make([]byte, 16)
@@ -129,7 +129,7 @@ func (stream *RedisStream) AddEntry(idStr string, fields map[string]string) (Str
 	tree, _, _ := stream.tree.Insert(key, entry)
 	stream.tree = tree
 
-	return entry.ID, nil
+	return entry, nil
 }
 
 func (stream *RedisStream) Range(startKey, endKey []byte) []*StreamEntry {

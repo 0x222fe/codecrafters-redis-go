@@ -33,13 +33,19 @@ func xaddHandler(req *request.Request, args []string) error {
 	for i := 2; i < len(args); i += 2 {
 		fields[args[i]] = args[i+1]
 	}
-	id, err := stream.AddEntry(idStr, fields)
+	entry, err := stream.AddEntry(idStr, fields)
 	if err != nil {
 		return err
 	}
 
-	s := id.String()
+	s := entry.ID.String()
 	encoded := resp.NewRESPBulkString(&s).Encode()
 	writeResponse(req.Client, encoded)
+
+	go func() {
+		store := req.State.GetStore()
+		store.IterateStreamInsertHandlers(key, entry)
+	}()
+
 	return nil
 }

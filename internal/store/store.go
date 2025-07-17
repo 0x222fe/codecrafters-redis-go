@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type ValueType string
@@ -18,16 +20,21 @@ const (
 	None   ValueType = "none"
 )
 
+type StreamInsertHandler func(entry *StreamEntry)
+type StreamInsertHandlerRegistry map[uuid.UUID]StreamInsertHandler
+
 type Store struct {
-	mu      sync.RWMutex
-	data    map[string]storeItem
-	streams map[string]*RedisStream
+	mu               sync.RWMutex
+	data             map[string]storeItem
+	streams          map[string]*RedisStream
+	streamRegistries map[string]StreamInsertHandlerRegistry
 }
 
 func NewStore() *Store {
 	return &Store{
-		data:    make(map[string]storeItem),
-		streams: make(map[string]*RedisStream),
+		data:             make(map[string]storeItem),
+		streams:          make(map[string]*RedisStream),
+		streamRegistries: make(map[string]StreamInsertHandlerRegistry),
 	}
 }
 
@@ -87,6 +94,42 @@ func (store *Store) AddStream(key string, stream *RedisStream) error {
 
 	store.streams[key] = stream
 	return nil
+}
+
+func (store *Store) RegisterStreamInsertHandler(streamKey string, handler StreamInsertHandler) uuid.UUID {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	registry, ok := store.streamRegistries[streamKey]
+	if !ok {
+		registry = make(StreamInsertHandlerRegistry)
+		store.streamRegistries[streamKey] = registry
+	}
+
+	id := uuid.New()
+	registry[id] = handler
+	return id
+}
+
+func (store *Store) UnregisterStreamInsertHandler(streamKey string, handlerID uuid.UUID) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	if registry, ok := store.streamRegistries[streamKey]; ok {
+		delete(registry, handlerID)
+	}
+}
+
+func (store *Store) IterateStreamInsertHandlers(streamKey string, entry *StreamEntry) {
+	store.mu.RLock()
+	defer store.mu.RUnlock()
+	registry, ok := store.streamRegistries[streamKey]
+	if !ok {
+		return
+	}
+
+	for _, handler := range registry {
+		handler(entry)
+	}
 }
 
 func (store *Store) Get(key string, valType ValueType) (any, bool) {
