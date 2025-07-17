@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
-	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
 )
 
 func xrangeHandler(req *request.Request, args []string) error {
@@ -31,28 +31,15 @@ func xrangeHandler(req *request.Request, args []string) error {
 		end = e.RadixKey()
 	}
 
-	arr := make([]resp.RESPValue, 0)
 	stream, ok := req.State.GetStore().GetStream(key)
+	var encoded []byte
 	if ok {
 		entries := stream.Range(start, end)
-
-		for _, entry := range entries {
-			idStr := entry.ID.String()
-			entryArr := make([]resp.RESPValue, 0, 2*len(entry.Fields))
-			for k, v := range entry.Fields {
-				entryArr = append(entryArr, resp.NewRESPBulkString(&k))
-				entryArr = append(entryArr, resp.NewRESPBulkString(&v))
-			}
-
-			inner := []resp.RESPValue{
-				resp.NewRESPBulkString(&idStr),
-				resp.NewRESPArray(entryArr),
-			}
-			arr = append(arr, resp.NewRESPArray(inner))
-		}
+		encoded = utils.StreamEntriesToRESPArray(entries).Encode()
+	} else {
+		encoded = utils.StreamEntriesToRESPArray(nil).Encode()
 	}
 
-	encoded := resp.NewRESPArray(arr).Encode()
 	writeResponse(req.Client, encoded)
 	return nil
 }

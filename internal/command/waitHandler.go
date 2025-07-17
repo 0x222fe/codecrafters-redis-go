@@ -41,7 +41,7 @@ func waitHandler(req *request.Request, args []string) error {
 	ctx, cancel := context.WithTimeout(req.Ctx, time.Duration(timeoutMillis)*time.Millisecond)
 	defer cancel()
 
-	command := utils.EncodeStringSliceToRESP([]string{"REPLCONF", "GETACK", "*"})
+	command := utils.EncodeBulkStrArrToRESP([]string{"REPLCONF", "GETACK", "*"})
 
 	replicas := req.State.GetReplicas()
 	acked, jobs := make(map[uuid.UUID]struct{}, len(replicas)), make(map[uuid.UUID]struct{}, len(replicas))

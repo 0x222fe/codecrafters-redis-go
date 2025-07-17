@@ -18,7 +18,7 @@ func keysHandler(req *request.Request, args []string) error {
 
 	keys := req.State.GetStore().Keys()
 
-	res := utils.EncodeStringSliceToRESP(keys)
+	res := utils.EncodeBulkStrArrToRESP(keys)
 
 	return writeResponse(req.Client, res)
 }

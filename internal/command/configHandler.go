@@ -24,7 +24,7 @@ func configHandler(req *request.Request, args []string) error {
 			return err
 		}
 
-		encoded := utils.EncodeStringSliceToRESP([]string{cfgName, val})
+		encoded := utils.EncodeBulkStrArrToRESP([]string{cfgName, val})
 		return writeResponse(req.Client, encoded)
 
 	default:

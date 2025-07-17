@@ -49,6 +49,7 @@ const (
 	TYPE     CommandKey = "TYPE"
 	XADD     CommandKey = "XADD"
 	XRANGE   CommandKey = "XRANGE"
+	XREAD    CommandKey = "XREAD"
 )
 
 var (
@@ -66,6 +67,7 @@ var (
 		TYPE:     {typeHandler, cmdTypeRead},
 		XADD:     {xaddHandler, cmdTypeWrite},
 		XRANGE:   {xrangeHandler, cmdTypeRead},
+		XREAD:    {xreadHandler, cmdTypeRead},
 	}
 )
 
@@ -129,7 +131,7 @@ func RunCommand(req *request.Request, cmd Command) error {
 	}
 
 	if spec.cmdType == cmdTypeWrite && !isReplica {
-		replicaCommand := utils.EncodeStringSliceToRESP(append([]string{cmdName}, cmd.Args...))
+		replicaCommand := utils.EncodeBulkStrArrToRESP(append([]string{cmdName}, cmd.Args...))
 
 		req.State.WriteState(func(s *state.State) {
 			s.ReplicationOffset += len(replicaCommand)

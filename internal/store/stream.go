@@ -19,8 +19,8 @@ type RedisStream struct {
 }
 
 type StreamEntryID struct {
-	millis   uint64
-	sequence uint64
+	Millis uint64
+	Seq    uint64
 }
 
 type StreamEntry struct {
@@ -36,13 +36,13 @@ func NewStream(key string) *RedisStream {
 
 func (id StreamEntryID) RadixKey() []byte {
 	var b [16]byte
-	binary.BigEndian.PutUint64(b[:8], uint64(id.millis))
-	binary.BigEndian.PutUint64(b[8:], uint64(id.sequence))
+	binary.BigEndian.PutUint64(b[:8], uint64(id.Millis))
+	binary.BigEndian.PutUint64(b[8:], uint64(id.Seq))
 	return b[:]
 }
 
 func (id StreamEntryID) String() string {
-	return fmt.Sprintf("%d-%d", id.millis, id.sequence)
+	return fmt.Sprintf("%d-%d", id.Millis, id.Seq)
 }
 
 func (stream *RedisStream) GetItem(idStr string) (*StreamEntry, bool) {
@@ -76,8 +76,8 @@ func (stream *RedisStream) AddEntry(idStr string, fields map[string]string) (Str
 	switch {
 	case millisP == nil && seqP == nil:
 		if ok {
-			millis = top.ID.millis
-			seq = top.ID.sequence + 1
+			millis = top.ID.Millis
+			seq = top.ID.Seq + 1
 		} else {
 			millis = uint64(time.Now().UnixMilli())
 			seq = 0
@@ -85,12 +85,12 @@ func (stream *RedisStream) AddEntry(idStr string, fields map[string]string) (Str
 	case millisP != nil && seqP == nil:
 		millis = *millisP
 		if ok {
-			if millis < top.ID.millis {
+			if millis < top.ID.Millis {
 				return StreamEntryID{}, errors.New("The ID specified in XADD is equal or smaller than the target stream top item")
 			}
 
-			if millis == top.ID.millis {
-				seq = top.ID.sequence + 1
+			if millis == top.ID.Millis {
+				seq = top.ID.Seq + 1
 			} else {
 				seq = 0
 			}
@@ -109,7 +109,7 @@ func (stream *RedisStream) AddEntry(idStr string, fields map[string]string) (Str
 		}
 
 		if ok {
-			if millis < top.ID.millis || (millis == top.ID.millis && seq <= top.ID.sequence) {
+			if millis < top.ID.Millis || (millis == top.ID.Millis && seq <= top.ID.Seq) {
 				return StreamEntryID{}, errors.New("The ID specified in XADD is equal or smaller than the target stream top item")
 			}
 		}
@@ -122,7 +122,7 @@ func (stream *RedisStream) AddEntry(idStr string, fields map[string]string) (Str
 	binary.BigEndian.PutUint64(key[8:], seq)
 
 	entry := &StreamEntry{
-		ID:     StreamEntryID{millis: millis, sequence: seq},
+		ID:     StreamEntryID{Millis: millis, Seq: seq},
 		Fields: fields,
 	}
 
@@ -161,7 +161,7 @@ func ParseStreamEntryID(str string) (StreamEntryID, error) {
 	if n != 2 || err != nil {
 		return StreamEntryID{}, fmt.Errorf("invalid stream entry ID format: %s", str)
 	}
-	return StreamEntryID{millis: millis, sequence: sequence}, nil
+	return StreamEntryID{Millis: millis, Seq: sequence}, nil
 }
 
 func validateStreamEntryIDInput(id string) (*uint64, *uint64, error) {
