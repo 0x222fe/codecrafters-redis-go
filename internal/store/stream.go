@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -64,21 +65,31 @@ func (stream *RedisStream) AddEntry(idStr string, fields map[string]string) (Str
 		if err != nil {
 			return StreamEntryID{}, fmt.Errorf("invalid stream entry ID: %s", err)
 		}
-		key := id.radixKey()
+
+		if id.millis == 0 && id.sequence == 0 {
+			return StreamEntryID{}, errors.New("The ID specified in XADD must be greater than 0-0")
+		}
+
+		prefix := make([]byte, 8)
+		binary.BigEndian.PutUint64(prefix[:8], uint64(id.millis))
 
 		stream.mu.Lock()
 		defer stream.mu.Unlock()
-		_, ok := stream.tree.Get(key)
 
+		_, m, ok := stream.tree.Root().Maximum()
 		if ok {
-			return StreamEntryID{}, fmt.Errorf("stream entry already exists: %s", idStr)
-		}
+			if (m.id.millis > id.millis) ||
+				(m.id.millis == id.millis && m.id.sequence >= id.sequence) {
 
+				return StreamEntryID{}, errors.New("The ID specified in XADD is equal or smaller than the target stream top item")
+			}
+		}
 		entry := &StreamEntry{
 			id:     id,
 			fields: fields,
 		}
-		t, _, _ := stream.tree.Insert(key, entry)
+
+		t, _, _ := stream.tree.Insert(id.radixKey(), entry)
 		stream.tree = t
 		return id, nil
 	}

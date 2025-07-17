@@ -35,9 +35,6 @@ func xaddHandler(req *request.Request, args []string) error {
 	}
 	id, err := stream.AddEntry(idStr, fields)
 	if err != nil {
-		err = fmt.Errorf("XADD: %s", err)
-		errEncoded := resp.NewRESPError(err.Error()).Encode()
-		writeResponse(req.Client, errEncoded)
 		return err
 	}
 
