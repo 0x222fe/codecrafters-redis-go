@@ -48,6 +48,7 @@ const (
 	WAIT     CommandKey = "WAIT"
 	TYPE     CommandKey = "TYPE"
 	XADD     CommandKey = "XADD"
+	XRANGE   CommandKey = "XRANGE"
 )
 
 var (
@@ -64,6 +65,7 @@ var (
 		WAIT:     {waitHandler, cmdTypeRead},
 		TYPE:     {typeHandler, cmdTypeRead},
 		XADD:     {xaddHandler, cmdTypeWrite},
+		XRANGE:   {xrangeHandler, cmdTypeRead},
 	}
 )
 

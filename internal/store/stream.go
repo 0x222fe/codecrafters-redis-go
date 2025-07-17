@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -23,8 +24,8 @@ type StreamEntryID struct {
 }
 
 type StreamEntry struct {
-	id     StreamEntryID
-	fields map[string]string
+	ID     StreamEntryID
+	Fields map[string]string
 }
 
 func NewStream(key string) *RedisStream {
@@ -33,7 +34,7 @@ func NewStream(key string) *RedisStream {
 	}
 }
 
-func (id StreamEntryID) radixKey() []byte {
+func (id StreamEntryID) RadixKey() []byte {
 	var b [16]byte
 	binary.BigEndian.PutUint64(b[:8], uint64(id.millis))
 	binary.BigEndian.PutUint64(b[8:], uint64(id.sequence))
@@ -45,11 +46,11 @@ func (id StreamEntryID) String() string {
 }
 
 func (stream *RedisStream) GetItem(idStr string) (*StreamEntry, bool) {
-	id, err := parseStreamEntryID(idStr)
+	id, err := ParseStreamEntryID(idStr)
 	if err != nil {
 		return nil, false
 	}
-	key := id.radixKey()
+	key := id.RadixKey()
 
 	stream.mu.RLock()
 	defer stream.mu.RUnlock()
@@ -75,8 +76,8 @@ func (stream *RedisStream) AddEntry(idStr string, fields map[string]string) (Str
 	switch {
 	case millisP == nil && seqP == nil:
 		if ok {
-			millis = top.id.millis
-			seq = top.id.sequence + 1
+			millis = top.ID.millis
+			seq = top.ID.sequence + 1
 		} else {
 			millis = uint64(time.Now().UnixMilli())
 			seq = 0
@@ -84,12 +85,12 @@ func (stream *RedisStream) AddEntry(idStr string, fields map[string]string) (Str
 	case millisP != nil && seqP == nil:
 		millis = *millisP
 		if ok {
-			if millis < top.id.millis {
+			if millis < top.ID.millis {
 				return StreamEntryID{}, errors.New("The ID specified in XADD is equal or smaller than the target stream top item")
 			}
 
-			if millis == top.id.millis {
-				seq = top.id.sequence + 1
+			if millis == top.ID.millis {
+				seq = top.ID.sequence + 1
 			} else {
 				seq = 0
 			}
@@ -108,7 +109,7 @@ func (stream *RedisStream) AddEntry(idStr string, fields map[string]string) (Str
 		}
 
 		if ok {
-			if millis < top.id.millis || (millis == top.id.millis && seq <= top.id.sequence) {
+			if millis < top.ID.millis || (millis == top.ID.millis && seq <= top.ID.sequence) {
 				return StreamEntryID{}, errors.New("The ID specified in XADD is equal or smaller than the target stream top item")
 			}
 		}
@@ -121,17 +122,37 @@ func (stream *RedisStream) AddEntry(idStr string, fields map[string]string) (Str
 	binary.BigEndian.PutUint64(key[8:], seq)
 
 	entry := &StreamEntry{
-		id:     StreamEntryID{millis: millis, sequence: seq},
-		fields: fields,
+		ID:     StreamEntryID{millis: millis, sequence: seq},
+		Fields: fields,
 	}
 
 	tree, _, _ := stream.tree.Insert(key, entry)
 	stream.tree = tree
 
-	return entry.id, nil
+	return entry.ID, nil
 }
 
-func parseStreamEntryID(str string) (StreamEntryID, error) {
+func (stream *RedisStream) Range(startKey, endKey []byte) []*StreamEntry {
+	stream.mu.RLock()
+	defer stream.mu.RUnlock()
+
+	result := make([]*StreamEntry, 0)
+	it := stream.tree.Root().Iterator()
+	it.SeekLowerBound(startKey)
+	for {
+		key, entry, ok := it.Next()
+		if !ok {
+			break
+		}
+		if bytes.Compare(key, endKey) > 0 {
+			break
+		}
+		result = append(result, entry)
+	}
+	return result
+}
+
+func ParseStreamEntryID(str string) (StreamEntryID, error) {
 	var millis, sequence uint64
 	n, err := fmt.Sscanf(str, "%d-%d", &millis, &sequence)
 	if n != 2 || err != nil {
