@@ -47,6 +47,7 @@ const (
 	PSYNC    CommandKey = "PSYNC"
 	WAIT     CommandKey = "WAIT"
 	TYPE     CommandKey = "TYPE"
+	XADD     CommandKey = "XADD"
 )
 
 var (
@@ -62,6 +63,7 @@ var (
 		PSYNC:    {psyncHandler, cmdTypeRead},
 		WAIT:     {waitHandler, cmdTypeRead},
 		TYPE:     {typeHandler, cmdTypeRead},
+		XADD:     {xaddHandler, cmdTypeWrite},
 	}
 )
 

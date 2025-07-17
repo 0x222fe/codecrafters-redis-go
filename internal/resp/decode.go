@@ -37,6 +37,8 @@ func decodeRESPInput(reader *countingReader) (RESPValue, error) {
 	switch flag[0] {
 	case '+':
 		return parseStr(reader)
+	case '-':
+		return parseErr(reader)
 	case '$':
 		return parseBulkStr(reader)
 	case ':':
@@ -52,6 +54,8 @@ func decodeRESPInputExact(reader *countingReader, valType respValueType) (RESPVa
 	switch valType {
 	case RESPStr:
 		return parseStr(reader)
+	case RESPErr:
+		return parseErr(reader)
 	case RESPBulkStr:
 		return parseBulkStr(reader)
 	case RESPInt:
@@ -70,6 +74,22 @@ func parseStr(reader *countingReader) (RESPValue, error) {
 	}
 	if flag != '+' {
 		return RESPValue{}, fmt.Errorf("expected '+' for RESP string, got %q", flag)
+	}
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		return RESPValue{}, err
+	}
+	s := strings.TrimSuffix(line, "\r\n")
+	return NewRESPString(s), nil
+}
+
+func parseErr(reader *countingReader) (RESPValue, error) {
+	flag, err := reader.ReadByte()
+	if err != nil {
+		return RESPValue{}, err
+	}
+	if flag != '-' {
+		return RESPValue{}, fmt.Errorf("expected '-' for RESP error, got %q", flag)
 	}
 	line, err := reader.ReadString('\n')
 	if err != nil {

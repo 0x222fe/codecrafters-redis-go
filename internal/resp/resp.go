@@ -14,6 +14,7 @@ const (
 	RESPInt
 	RESPArr
 	RESPBulkStr
+	RESPErr
 )
 
 var (
@@ -37,6 +38,10 @@ func NewRESPBulkString(s *string) RESPValue {
 	return RESPValue{valType: RESPBulkStr, strVal: s}
 }
 
+func NewRESPError(s string) RESPValue {
+	return RESPValue{valType: RESPErr, strVal: &s}
+}
+
 func (v RESPValue) GetType() string {
 	switch v.valType {
 	case RESPStr:
@@ -47,13 +52,15 @@ func (v RESPValue) GetType() string {
 		return "RESPArr"
 	case RESPBulkStr:
 		return "RESPBulkStr"
+	case RESPErr:
+		return "RESPERR"
 	default:
 		return "Unknown"
 	}
 }
 
 func (v RESPValue) GetStringValue() (string, bool) {
-	if v.valType == RESPStr {
+	if v.valType == RESPStr || v.valType == RESPErr {
 		return *v.strVal, true
 	}
 	return "", false

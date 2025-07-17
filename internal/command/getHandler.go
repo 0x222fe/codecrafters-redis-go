@@ -13,7 +13,7 @@ func getHandler(req *request.Request, args []string) error {
 	}
 
 	var res []byte
-	value, exists := req.State.GetStore().Get(args[0])
+	value, exists := req.State.GetStore().GetString(args[0])
 	if !exists {
 		res = resp.RESPNilArray.Encode()
 	} else {

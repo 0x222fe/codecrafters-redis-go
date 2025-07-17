@@ -5,8 +5,10 @@ import "fmt"
 func (r RESPValue) Encode() []byte {
 	switch r.valType {
 	case RESPStr:
-		//INFO: strVal should never be nil for respStr
+		//INFO: strVal should never be nil for respStr and respErr
 		return fmt.Appendf(nil, "+%s\r\n", *r.strVal)
+	case RESPErr:
+		return fmt.Appendf(nil, "-%s\r\n", *r.strVal)
 	case RESPBulkStr:
 		if r.strVal != nil {
 			return fmt.Appendf(nil, "$%d\r\n%s\r\n", len(*r.strVal), *r.strVal)
