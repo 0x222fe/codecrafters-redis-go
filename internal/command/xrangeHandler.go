@@ -14,19 +14,27 @@ func xrangeHandler(req *request.Request, args []string) error {
 	}
 	key, startS, endS := args[0], args[1], args[2]
 
-	start, err := store.ParseStreamEntryID(startS)
-	if err != nil {
-		return errors.New("invalid start")
+	var start, end []byte = nil, nil
+	if startS != "-" {
+		s, err := store.ParseStreamEntryID(startS)
+		if err != nil {
+			return errors.New("invalid start")
+		}
+		start = s.RadixKey()
 	}
-	end, err := store.ParseStreamEntryID(endS)
-	if err != nil {
-		return errors.New("invalid end")
+
+	if endS != "+" {
+		e, err := store.ParseStreamEntryID(endS)
+		if err != nil {
+			return errors.New("invalid end")
+		}
+		end = e.RadixKey()
 	}
 
 	arr := make([]resp.RESPValue, 0)
 	stream, ok := req.State.GetStore().GetStream(key)
 	if ok {
-		entries := stream.Range(start.RadixKey(), end.RadixKey())
+		entries := stream.Range(start, end)
 
 		for _, entry := range entries {
 			idStr := entry.ID.String()

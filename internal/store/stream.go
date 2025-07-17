@@ -138,13 +138,16 @@ func (stream *RedisStream) Range(startKey, endKey []byte) []*StreamEntry {
 
 	result := make([]*StreamEntry, 0)
 	it := stream.tree.Root().Iterator()
-	it.SeekLowerBound(startKey)
+	if startKey != nil {
+		it.SeekLowerBound(startKey)
+	}
+
 	for {
 		key, entry, ok := it.Next()
 		if !ok {
 			break
 		}
-		if bytes.Compare(key, endKey) > 0 {
+		if endKey != nil && bytes.Compare(key, endKey) > 0 {
 			break
 		}
 		result = append(result, entry)
