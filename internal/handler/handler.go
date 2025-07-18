@@ -117,6 +117,10 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 	}
 
 	if req.IsInTxn() {
+		if cmd.Name == MULTI {
+			return errors.New("MULTI calls can not be nested")
+		}
+
 		txnCmds := req.Transaction.Commands
 		txnCmds = append(txnCmds, request.TxnCommand{Command: cmd, Handler: spec.handler})
 		req.Transaction.Commands = txnCmds
