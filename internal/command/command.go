@@ -50,6 +50,7 @@ const (
 	XADD     CommandKey = "XADD"
 	XRANGE   CommandKey = "XRANGE"
 	XREAD    CommandKey = "XREAD"
+	INCR     CommandKey = "INCR"
 )
 
 var (
@@ -68,6 +69,7 @@ var (
 		XADD:     {xaddHandler, cmdTypeWrite},
 		XRANGE:   {xrangeHandler, cmdTypeRead},
 		XREAD:    {xreadHandler, cmdTypeRead},
+		INCR:     {incrHandler, cmdTypeWrite},
 	}
 )
 
