@@ -19,8 +19,8 @@ func incrHandler(req *request.Request, args []string) error {
 	val, ok := req.State.GetStore().Get(key, store.String)
 	if !ok {
 		req.State.GetStore().Set(key, "1", store.String, nil)
-		encoded := resp.NewRESPInt(1).Encode()
-		writeResponse(req.Client, encoded)
+		res := resp.NewRESPInt(1)
+		writeResponse(req, res)
 		return nil
 	}
 
@@ -36,7 +36,7 @@ func incrHandler(req *request.Request, args []string) error {
 
 	n++
 	req.State.GetStore().Set(key, strconv.FormatInt(n, 10), store.String, nil)
-	encoded := resp.NewRESPInt(n).Encode()
-	writeResponse(req.Client, encoded)
+	res := resp.NewRESPInt(n)
+	writeResponse(req, res)
 	return nil
 }

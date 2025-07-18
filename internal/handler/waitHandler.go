@@ -35,7 +35,7 @@ func waitHandler(req *request.Request, args []string) error {
 	}
 
 	if repCount == 0 {
-		return writeResponse(req.Client, resp.NewRESPInt(0).Encode())
+		return writeResponse(req, resp.NewRESPInt(0))
 	}
 
 	ctx, cancel := context.WithTimeout(req.Ctx, time.Duration(timeoutMillis)*time.Millisecond)
@@ -87,7 +87,7 @@ outter:
 					continue
 				}
 
-				err := writeResponse(r.Client, command)
+				_, err := r.Client.Write(command.Encode())
 				if err != nil {
 					fmt.Printf("Error writing to replica %s: %v\n", r.Client.ID, err)
 					continue
@@ -101,7 +101,7 @@ outter:
 	}
 
 	ackCount := int64(len(acked))
-	return writeResponse(req.Client, resp.NewRESPInt(int64(ackCount)).Encode())
+	return writeResponse(req, resp.NewRESPInt(int64(ackCount)))
 }
 
 func getRepOffsetUpdate(ctx context.Context, req *request.Request, rep *state.Replica, syncedChan chan uuid.UUID, doneChan chan uuid.UUID) {

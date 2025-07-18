@@ -5,14 +5,14 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 )
 
-func EncodeBulkStrArrToRESP(slice []string) []byte {
+func EncodeBulkStrArrToRESP(slice []string) resp.RESPValue {
 	arr := make([]resp.RESPValue, len(slice))
 
 	for i, v := range slice {
 		arr[i] = resp.NewRESPBulkString(&v)
 	}
 
-	return resp.NewRESPArray(arr).Encode()
+	return resp.NewRESPArray(arr)
 }
 
 func StreamEntriesToRESPArray(entries []*store.StreamEntry) resp.RESPValue {

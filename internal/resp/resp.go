@@ -20,6 +20,7 @@ const (
 var (
 	RESPNilBulkString = NewRESPBulkString(nil)
 	RESPNilArray      = NewRESPArray(nil)
+	RESPEmptyArray    = NewRESPArray([]RESPValue{})
 )
 
 func NewRESPString(s string) RESPValue {

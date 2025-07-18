@@ -5,6 +5,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/google/uuid"
 )
 
@@ -21,6 +22,14 @@ func NewClient(c net.Conn) *Client {
 		conn:   c,
 		writer: bufio.NewWriter(c),
 	}
+}
+
+func (r *Client) WriteResp(resp resp.RESPValue) error {
+	r.mu.Lock()
+	r.mu.Unlock()
+
+	_, err := r.Write(resp.Encode())
+	return err
 }
 
 func (r *Client) Write(p []byte) (int, error) {

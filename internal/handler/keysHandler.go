@@ -20,5 +20,5 @@ func keysHandler(req *request.Request, args []string) error {
 
 	res := utils.EncodeBulkStrArrToRESP(keys)
 
-	return writeResponse(req.Client, res)
+	return writeResponse(req, res)
 }

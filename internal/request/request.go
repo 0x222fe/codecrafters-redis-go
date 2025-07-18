@@ -28,3 +28,11 @@ func NewRequest(ctx context.Context, client *client.Client, state *state.AppStat
 		Propagated:  false,
 	}
 }
+
+func (r *Request) GetWriter() client.RespWriter {
+	if r.InTxn {
+		return r.Transaction
+	}
+
+	return r.Client
+}

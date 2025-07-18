@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
 )
@@ -32,14 +33,14 @@ func xrangeHandler(req *request.Request, args []string) error {
 	}
 
 	stream, ok := req.State.GetStore().GetStream(key)
-	var encoded []byte
+	var res resp.RESPValue
 	if ok {
 		entries := stream.Range(start, end)
-		encoded = utils.StreamEntriesToRESPArray(entries).Encode()
+		res = utils.StreamEntriesToRESPArray(entries)
 	} else {
-		encoded = utils.StreamEntriesToRESPArray(nil).Encode()
+		res = utils.StreamEntriesToRESPArray(nil)
 	}
 
-	writeResponse(req.Client, encoded)
+	writeResponse(req, res)
 	return nil
 }

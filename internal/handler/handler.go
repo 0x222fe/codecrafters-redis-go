@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/client"
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
@@ -78,8 +77,7 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 		req.InTxn = false
 
 		if len(req.Transaction.Commands) == 0 {
-			encoded := resp.NewRESPArray([]resp.RESPValue{}).Encode()
-			writeResponse(req.Client, encoded)
+			writeResponse(req, resp.RESPEmptyArray)
 			return nil
 		}
 
@@ -112,8 +110,8 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 		txnCmds := req.Transaction.Commands
 		txnCmds = append(txnCmds, request.TxnCommand{Command: cmd, Handler: spec.handler})
 		req.Transaction.Commands = txnCmds
-		encoded := resp.NewRESPString("QUEUED").Encode()
-		writeResponse(req.Client, encoded)
+		res := resp.NewRESPString("QUEUED")
+		writeResponse(req, res)
 		return nil
 	}
 
@@ -124,15 +122,16 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 
 	if spec.cmdType == cmdTypeWrite && !isReplica {
 		replicaCommand := utils.EncodeBulkStrArrToRESP(append([]string{cmdName}, cmd.Args...))
+		encoded := replicaCommand.Encode()
 
 		req.State.WriteState(func(s *state.State) {
-			s.ReplicationOffset += len(replicaCommand)
+			s.ReplicationOffset += len(encoded)
 		})
 
 		replicas := req.State.GetReplicas()
 
 		for _, rep := range replicas {
-			if _, err := rep.Client.Write(replicaCommand); err != nil {
+			if _, err := rep.Client.Write(encoded); err != nil {
 				fmt.Printf("failed to propagate command to replica %s: %v\n", rep.Client.RemoteAddr(), err)
 			}
 		}
@@ -141,11 +140,12 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 	return nil
 }
 
-func writeResponse(c *client.Client, response []byte) error {
-	_, err := c.Write(response)
-	fmt.Printf("Response sent to %s: %q\n", c.RemoteAddr(), string(response))
+func writeResponse(r *request.Request, res resp.RESPValue) error {
+	writer := r.GetWriter()
+	err := writer.WriteResp(res)
 	if err != nil {
 		return fmt.Errorf("failed to write response: %w", err)
 	}
+	fmt.Printf("Response sent to %s\n", r.Client.RemoteAddr())
 	return nil
 }

@@ -24,11 +24,11 @@ func configHandler(req *request.Request, args []string) error {
 			return err
 		}
 
-		encoded := utils.EncodeBulkStrArrToRESP([]string{cfgName, val})
-		return writeResponse(req.Client, encoded)
+		res := utils.EncodeBulkStrArrToRESP([]string{cfgName, val})
+		return writeResponse(req, res)
 
 	default:
-		return writeResponse(req.Client, resp.RESPNilBulkString.Encode())
+		return writeResponse(req, resp.RESPNilBulkString)
 	}
 }
 

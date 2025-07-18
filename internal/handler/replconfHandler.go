@@ -25,7 +25,7 @@ func replconfHandler(req *request.Request, args []string) error {
 	case "ACK":
 		return replconfACK(req, args[1:])
 	default:
-		return writeResponse(req.Client, resp.NewRESPString("OK").Encode())
+		return writeResponse(req, resp.NewRESPString("OK"))
 	}
 }
 
@@ -40,7 +40,7 @@ func replconfGETACK(req *request.Request, args []string) error {
 	})
 
 	command := utils.EncodeBulkStrArrToRESP([]string{"REPLCONF", "ACK", strconv.Itoa(offset)})
-	return writeResponse(req.Client, command)
+	return writeResponse(req, command)
 }
 
 func replconfACK(req *request.Request, args []string) error {

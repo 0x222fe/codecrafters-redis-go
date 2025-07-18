@@ -103,9 +103,9 @@ func xreadHandler(req *request.Request, args []string) error {
 		}
 	}
 
-	var encoded []byte
+	var res resp.RESPValue
 	if fetchedCount == 0 {
-		encoded = resp.NewRESPBulkString(nil).Encode()
+		res = resp.RESPNilBulkString
 	} else {
 		arr := make([]resp.RESPValue, 0)
 		for key, entries := range entryDict {
@@ -115,9 +115,9 @@ func xreadHandler(req *request.Request, args []string) error {
 			streamArr = append(streamArr, streamEntryRESP)
 			arr = append(arr, resp.NewRESPArray(streamArr))
 		}
-		encoded = resp.NewRESPArray(arr).Encode()
+		res = resp.NewRESPArray(arr)
 	}
 
-	writeResponse(req.Client, encoded)
+	writeResponse(req, res)
 	return nil
 }

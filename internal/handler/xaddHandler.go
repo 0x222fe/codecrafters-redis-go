@@ -39,8 +39,8 @@ func xaddHandler(req *request.Request, args []string) error {
 	}
 
 	s := entry.ID.String()
-	encoded := resp.NewRESPBulkString(&s).Encode()
-	writeResponse(req.Client, encoded)
+	res := resp.NewRESPBulkString(&s)
+	writeResponse(req, res)
 
 	go func() {
 		store := req.State.GetStore()

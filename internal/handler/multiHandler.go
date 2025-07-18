@@ -6,9 +6,8 @@ import (
 )
 
 func multiHandler(req *request.Request, args []string) error {
+	res := resp.NewRESPString("OK")
+	writeResponse(req, res)
 	req.InTxn = true
-
-	encoded := resp.NewRESPString("OK").Encode()
-	writeResponse(req.Client, encoded)
 	return nil
 }

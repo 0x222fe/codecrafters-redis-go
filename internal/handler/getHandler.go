@@ -12,13 +12,13 @@ func getHandler(req *request.Request, args []string) error {
 		return errors.New("Usage: GET <key>")
 	}
 
-	var res []byte
+	var res resp.RESPValue
 	value, exists := req.State.GetStore().GetString(args[0])
 	if !exists {
-		res = resp.RESPNilArray.Encode()
+		res = resp.RESPNilArray
 	} else {
-		res = resp.NewRESPString(value).Encode()
+		res = resp.NewRESPString(value)
 	}
 
-	return writeResponse(req.Client, res)
+	return writeResponse(req, res)
 }
