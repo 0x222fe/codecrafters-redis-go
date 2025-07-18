@@ -8,9 +8,9 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 )
 
-func rpushHandler(req *request.Request, args []string) error {
+func lpushHandler(req *request.Request, args []string) error {
 	if len(args) < 2 {
-		return errors.New("RPUSH requires at least 2 arguments")
+		return errors.New("LPUSH requires at least 2 arguments")
 	}
 
 	key, items := args[0], args[1:]
@@ -28,7 +28,7 @@ func rpushHandler(req *request.Request, args []string) error {
 		list = l
 	}
 
-	count := list.RPush(items...)
+	count := list.LPush(items...)
 
 	writeResponse(req, resp.NewRESPInt(int64(count)))
 	return nil

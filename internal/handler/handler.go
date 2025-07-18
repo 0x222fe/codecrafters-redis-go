@@ -45,6 +45,7 @@ const (
 	MULTI    request.CommandKey = "MULTI"
 	EXEC     request.CommandKey = "EXEC"
 	DISCARD  request.CommandKey = "DISCARD"
+	LPUSH    request.CommandKey = "LPUSH"
 	RPUSH    request.CommandKey = "RPUSH"
 	LRANGE   request.CommandKey = "LRANGE"
 )
@@ -67,6 +68,7 @@ var (
 		XREAD:    {xreadHandler, cmdTypeRead},
 		INCR:     {incrHandler, cmdTypeWrite},
 		MULTI:    {multiHandler, cmdTypeRead},
+		LPUSH:    {lpushHandler, cmdTypeWrite},
 		RPUSH:    {rpushHandler, cmdTypeWrite},
 		LRANGE:   {lrangeHandler, cmdTypeRead},
 	}

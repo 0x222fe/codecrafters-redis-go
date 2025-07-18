@@ -1,6 +1,8 @@
 package store
 
-import "sync"
+import (
+	"sync"
+)
 
 type RedisList struct {
 	mu   sync.RWMutex
@@ -13,11 +15,25 @@ func NewList() *RedisList {
 	}
 }
 
-func (l *RedisList) Push(items ...string) int {
+func (l *RedisList) LPush(items ...string) int {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.list = append(l.list, items...)
 
+	n := len(items)
+	newList := make([]string, n+len(l.list))
+	for i := range n {
+		newList[i] = items[n-1-i]
+	}
+	copy(newList[n:], l.list)
+	l.list = newList
+	return len(l.list)
+}
+
+func (l *RedisList) RPush(items ...string) int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.list = append(l.list, items...)
 	return len(l.list)
 }
 
