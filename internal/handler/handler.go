@@ -18,6 +18,10 @@ type commandSpec struct {
 }
 type commandHandler func(req *request.Request, args []string) error
 
+func (h commandHandler) Handle(req *request.Request, cmd request.Command) error {
+	return h(req, cmd.Args)
+}
+
 const (
 	cmdTypeRead commandType = iota
 	cmdTypeWrite
@@ -40,10 +44,11 @@ const (
 	XREAD    request.CommandKey = "XREAD"
 	INCR     request.CommandKey = "INCR"
 	MULTI    request.CommandKey = "MULTI"
+	EXEC     request.CommandKey = "EXEC"
 )
 
 var (
-	commands = map[request.CommandKey]commandSpec{
+	handlerReg = map[request.CommandKey]commandSpec{
 		PING:     {pingHandler, cmdTypeRead},
 		ECHO:     {echoHandler, cmdTypeRead},
 		SET:      {setHandler, cmdTypeWrite},
@@ -66,7 +71,22 @@ var (
 func RunCommand(req *request.Request, cmd request.Command) error {
 	cmdName := string(cmd.Name)
 
-	spec, find := commands[cmd.Name]
+	if cmd.Name == EXEC {
+		if !req.InTxn {
+			return errors.New("EXEC without MULTI")
+		}
+		req.InTxn = false
+
+		for _, cmd := range req.Transaction.Commands {
+			err := cmd.Handler.Handle(req, cmd.Command)
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+
+	spec, find := handlerReg[cmd.Name]
 	if !find {
 		return errors.New("unknown command: " + cmdName)
 	}
@@ -83,7 +103,9 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 	}
 
 	if req.InTxn {
-		req.TxnCommands = append(req.TxnCommands, cmd)
+		txnCmds := req.Transaction.Commands
+		txnCmds = append(txnCmds, request.TxnCommand{Command: cmd, Handler: spec.handler})
+		req.Transaction.Commands = txnCmds
 		encoded := resp.NewRESPString("QUEUED").Encode()
 		writeResponse(req.Client, encoded)
 		return nil

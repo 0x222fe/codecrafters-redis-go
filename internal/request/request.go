@@ -12,6 +12,7 @@ type Request struct {
 	Client      *client.Client
 	State       *state.AppState
 	InTxn       bool
+	Transaction *Transaction
 	TxnCommands []Command
 	// Wether this request is propagated from master
 	Propagated bool
@@ -22,6 +23,7 @@ func NewRequest(ctx context.Context, client *client.Client, state *state.AppStat
 		Ctx:         ctx,
 		Client:      client,
 		State:       state,
+		Transaction: &Transaction{Commands: make([]TxnCommand, 0)},
 		TxnCommands: make([]Command, 0),
 		Propagated:  false,
 	}
