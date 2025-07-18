@@ -74,8 +74,13 @@ func xreadHandler(req *request.Request, args []string) error {
 		}()
 
 		doneCh := make(chan streamEntry, 1)
-		ticker := time.NewTicker(time.Duration(*blockMillis) * time.Millisecond)
-		defer ticker.Stop()
+		var timeoutCh <-chan time.Time
+
+		if *blockMillis != 0 {
+			ticker := time.NewTicker(time.Duration(*blockMillis) * time.Millisecond)
+			defer ticker.Stop()
+			timeoutCh = ticker.C
+		}
 
 		for _, key := range keys {
 			localKey := key
@@ -89,7 +94,7 @@ func xreadHandler(req *request.Request, args []string) error {
 		case d := <-doneCh:
 			entryDict[d.streamKey] = append(entryDict[d.streamKey], d.entry)
 			fetchedCount++
-		case <-ticker.C:
+		case <-timeoutCh:
 		}
 	}
 
