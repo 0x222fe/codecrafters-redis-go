@@ -13,7 +13,7 @@ func rpushHandler(req *request.Request, args []string) error {
 		return errors.New("RPUSH requires at least 2 arguments")
 	}
 
-	key, item := args[0], args[1]
+	key, items := args[0], args[1:]
 
 	var list *store.RedisList
 	v, t, ok := req.State.GetStore().Get(key)
@@ -28,7 +28,7 @@ func rpushHandler(req *request.Request, args []string) error {
 		list = l
 	}
 
-	count := list.Push(item)
+	count := list.Push(items...)
 
 	writeResponse(req, resp.NewRESPInt(int64(count)))
 	return nil

@@ -13,10 +13,10 @@ func NewList() *RedisList {
 	}
 }
 
-func (l *RedisList) Push(item string) int {
+func (l *RedisList) Push(items ...string) int {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.list = append(l.list, item)
+	l.list = append(l.list, items...)
 
 	return len(l.list)
 }
