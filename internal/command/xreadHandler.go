@@ -36,21 +36,26 @@ func xreadHandler(req *request.Request, args []string) error {
 	}
 	count /= 2
 	keys, idStrs := args[1:1+count], args[1+count:]
-	ids := make([]store.StreamEntryID, 0, count)
+	idPtrs := make([]*store.StreamEntryID, 0, count)
 	for i := range count {
+		if idStrs[i] == "$" {
+			idPtrs = append(idPtrs, nil)
+			continue
+		}
+
 		id, err := store.ParseStreamEntryID(idStrs[i])
 		if err != nil {
 			return err
 		}
 		id.Seq++
-		ids = append(ids, id)
+		idPtrs = append(idPtrs, &id)
 	}
 
 	entryDict, fetchedCount := make(map[string][]*store.StreamEntry), 0
 	for i, key := range keys {
 		stream, ok := req.State.GetStore().GetStream(key)
-		if ok {
-			entries := stream.Range(ids[i].RadixKey(), nil)
+		if ok && idPtrs[i] != nil {
+			entries := stream.Range((*idPtrs[i]).RadixKey(), nil)
 			entryDict[key] = entries
 			fetchedCount += len(entries)
 		}
