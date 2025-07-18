@@ -108,13 +108,18 @@ func xreadHandler(req *request.Request, args []string) error {
 		res = resp.RESPNilBulkString
 	} else {
 		arr := make([]resp.RESPValue, 0)
-		for key, entries := range entryDict {
+		for _, key := range keys {
+			entries := entryDict[key]
+			if len(entries) == 0 {
+				continue
+			}
 			streamArr := make([]resp.RESPValue, 0, 2*len(entries))
 			streamArr = append(streamArr, resp.NewRESPBulkString(&key))
 			streamEntryRESP := utils.StreamEntriesToRESPArray(entries)
 			streamArr = append(streamArr, streamEntryRESP)
 			arr = append(arr, resp.NewRESPArray(streamArr))
 		}
+
 		res = resp.NewRESPArray(arr)
 	}
 
