@@ -2,8 +2,10 @@ package request
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
@@ -11,9 +13,7 @@ type Request struct {
 	Ctx         context.Context
 	Client      *client.Client
 	State       *state.AppState
-	InTxn       bool
 	Transaction *Transaction
-	TxnCommands []Command
 	// Wether this request is propagated from master
 	Propagated bool
 }
@@ -23,14 +23,43 @@ func NewRequest(ctx context.Context, client *client.Client, state *state.AppStat
 		Ctx:         ctx,
 		Client:      client,
 		State:       state,
-		Transaction: &Transaction{Commands: make([]TxnCommand, 0)},
-		TxnCommands: make([]Command, 0),
+		Transaction: nil,
 		Propagated:  false,
 	}
 }
 
+func (r *Request) StartTransaction() {
+	r.Transaction = NewTransaction()
+}
+
+func (r *Request) ExecTransaction() ([]resp.RESPValue, bool, error) {
+	defer func() {
+		r.Transaction = nil
+	}()
+
+	r.Transaction.Executing = true
+
+	if len(r.Transaction.Commands) == 0 {
+		return nil, false, nil
+	}
+
+	for _, cmd := range r.Transaction.Commands {
+		err := cmd.Handler.Handle(r, cmd.Command)
+		if err != nil {
+			fmt.Printf("failed to execute transaction command: %v\n", err)
+			return nil, true, err
+		}
+	}
+	res := r.Transaction.Responses
+	return res, true, nil
+}
+
+func (r *Request) IsInTxn() bool {
+	return r.Transaction != nil
+}
+
 func (r *Request) GetWriter() client.RespWriter {
-	if r.InTxn {
+	if r.Transaction != nil && r.Transaction.Executing {
 		return r.Transaction
 	}
 

@@ -6,8 +6,8 @@ import (
 )
 
 func multiHandler(req *request.Request, args []string) error {
+	req.StartTransaction()
 	res := resp.NewRESPString("OK")
 	writeResponse(req, res)
-	req.InTxn = true
 	return nil
 }

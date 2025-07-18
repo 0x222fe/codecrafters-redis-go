@@ -14,8 +14,17 @@ type TxnCommand struct {
 }
 
 type Transaction struct {
+	Executing bool
 	Commands  []TxnCommand
 	Responses []resp.RESPValue
+}
+
+func NewTransaction() *Transaction {
+	return &Transaction{
+		Executing: false,
+		Commands:  make([]TxnCommand, 0),
+		Responses: make([]resp.RESPValue, 0),
+	}
 }
 
 func (t *Transaction) WriteResp(r resp.RESPValue) error {

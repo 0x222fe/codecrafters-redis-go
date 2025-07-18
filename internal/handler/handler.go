@@ -70,24 +70,24 @@ var (
 func RunCommand(req *request.Request, cmd request.Command) error {
 	cmdName := string(cmd.Name)
 
+	fmt.Printf("is in transaction: %v, command: %s\n", req.IsInTxn(), cmdName)
 	if cmd.Name == EXEC {
-		if !req.InTxn {
+		if !req.IsInTxn() {
 			return errors.New("EXEC without MULTI")
 		}
-		req.InTxn = false
 
-		if len(req.Transaction.Commands) == 0 {
+		resArr, executed, err := req.ExecTransaction()
+		if err != nil {
+			return fmt.Errorf("failed to execute transaction: %w", err)
+		}
+
+		if !executed {
 			writeResponse(req, resp.RESPEmptyArray)
-			return nil
+		} else {
+			res := resp.NewRESPArray(resArr)
+			writeResponse(req, res)
 		}
-
-		for _, cmd := range req.Transaction.Commands {
-			err := cmd.Handler.Handle(req, cmd.Command)
-			if err != nil {
-				return err
-			}
-		}
-
+		return nil
 	}
 
 	spec, find := handlerReg[cmd.Name]
@@ -106,7 +106,7 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 		return errors.New("replica cannot execute write commands")
 	}
 
-	if req.InTxn {
+	if req.IsInTxn() {
 		txnCmds := req.Transaction.Commands
 		txnCmds = append(txnCmds, request.TxnCommand{Command: cmd, Handler: spec.handler})
 		req.Transaction.Commands = txnCmds
