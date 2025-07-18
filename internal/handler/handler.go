@@ -77,6 +77,12 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 		}
 		req.InTxn = false
 
+		if len(req.Transaction.Commands) == 0 {
+			encoded := resp.NewRESPArray([]resp.RESPValue{}).Encode()
+			writeResponse(req.Client, encoded)
+			return nil
+		}
+
 		for _, cmd := range req.Transaction.Commands {
 			err := cmd.Handler.Handle(req, cmd.Command)
 			if err != nil {

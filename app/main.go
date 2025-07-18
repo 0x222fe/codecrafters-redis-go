@@ -100,6 +100,8 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 
 	reader := bufio.NewReader(conn)
 
+	req := request.NewRequest(context.Background(), client, state)
+
 	for {
 		respVal, _, err := resp.DecodeRESPInputExact(reader, resp.RESPArr)
 		if err != nil {
@@ -119,8 +121,6 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 		}
 		fmt.Printf("Received command: %s\n", cmd.Name)
 
-		req := request.NewRequest(context.Background(), client, state)
-
 		err = handler.RunCommand(req, cmd)
 		if err != nil {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
@@ -137,6 +137,8 @@ func serveMaster(appState *state.AppState, conn net.Conn, reader *bufio.Reader) 
 
 	client := client.NewClient(conn)
 
+	req := request.NewRequest(context.Background(), client, appState)
+	req.Propagated = true
 	for {
 		respVal, bytesRead, err := resp.DecodeRESPInputExact(reader, resp.RESPArr)
 		if err != nil {
@@ -155,8 +157,6 @@ func serveMaster(appState *state.AppState, conn net.Conn, reader *bufio.Reader) 
 			continue
 		}
 		fmt.Println("Received command from master:", cmd.Name)
-		req := request.NewRequest(context.Background(), client, appState)
-		req.Propagated = true
 
 		err = handler.RunCommand(req, cmd)
 		if err != nil {
