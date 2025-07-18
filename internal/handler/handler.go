@@ -46,6 +46,7 @@ const (
 	EXEC     request.CommandKey = "EXEC"
 	DISCARD  request.CommandKey = "DISCARD"
 	RPUSH    request.CommandKey = "RPUSH"
+	LRANGE   request.CommandKey = "LRANGE"
 )
 
 var (
@@ -67,6 +68,7 @@ var (
 		INCR:     {incrHandler, cmdTypeWrite},
 		MULTI:    {multiHandler, cmdTypeRead},
 		RPUSH:    {rpushHandler, cmdTypeWrite},
+		LRANGE:   {lrangeHandler, cmdTypeRead},
 	}
 )
 
@@ -137,7 +139,7 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 	}
 
 	if spec.cmdType == cmdTypeWrite && !isReplica {
-		replicaCommand := utils.EncodeBulkStrArrToRESP(append([]string{cmdName}, cmd.Args...))
+		replicaCommand := utils.StringsToRESPBulkStr(append([]string{cmdName}, cmd.Args...))
 		encoded := replicaCommand.Encode()
 
 		req.State.WriteState(func(s *state.State) {

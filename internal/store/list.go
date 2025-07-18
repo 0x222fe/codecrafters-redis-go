@@ -26,3 +26,29 @@ func (l *RedisList) Len() int {
 	defer l.mu.RUnlock()
 	return len(l.list)
 }
+
+func (l *RedisList) GetRange(start, end int) []string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	n := len(l.list)
+	if n == 0 {
+		return []string{}
+	}
+	if start < 0 {
+		start += n
+	}
+	if end < 0 {
+		end += n
+	}
+	if start < 0 {
+		start = 0
+	}
+	if end >= n {
+		end = n - 1
+	}
+	if start > end || start >= n {
+		return []string{}
+	}
+	return l.list[start : end+1]
+}

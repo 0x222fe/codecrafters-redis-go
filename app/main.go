@@ -190,7 +190,7 @@ func initRepHandshake(appState *state.AppState) error {
 
 	reader := bufio.NewReader(conn)
 
-	pingCmd := utils.EncodeBulkStrArrToRESP([]string{"PING"})
+	pingCmd := utils.StringsToRESPBulkStr([]string{"PING"})
 	_, err = conn.Write(pingCmd.Encode())
 	if err != nil {
 		return fmt.Errorf("failed to send PING command: %w", err)
@@ -204,7 +204,7 @@ func initRepHandshake(appState *state.AppState) error {
 		return errors.New("unexpected response from master server, expected 'PONG', got: " + val)
 	}
 
-	replconfRes := utils.EncodeBulkStrArrToRESP([]string{"REPLCONF", "listening-port", strconv.Itoa(cfg.Port)})
+	replconfRes := utils.StringsToRESPBulkStr([]string{"REPLCONF", "listening-port", strconv.Itoa(cfg.Port)})
 	_, err = conn.Write(replconfRes.Encode())
 	if err != nil {
 		return fmt.Errorf("failed to send REPLCONF listening-port command: %w", err)
@@ -218,7 +218,7 @@ func initRepHandshake(appState *state.AppState) error {
 		return errors.New("unexpected response from master server, expected 'OK', got: " + val)
 	}
 
-	replconfRes = utils.EncodeBulkStrArrToRESP([]string{"REPLCONF", "capa", "psync2"})
+	replconfRes = utils.StringsToRESPBulkStr([]string{"REPLCONF", "capa", "psync2"})
 	_, err = conn.Write(replconfRes.Encode())
 	if err != nil {
 		return fmt.Errorf("failed to send REPLCONF capa command: %w", err)
@@ -232,7 +232,7 @@ func initRepHandshake(appState *state.AppState) error {
 		return errors.New("unexpected response from master server, expected 'OK', got: " + val)
 	}
 
-	psyncEncoded := utils.EncodeBulkStrArrToRESP([]string{"PSYNC", "?", "-1"}).Encode()
+	psyncEncoded := utils.StringsToRESPBulkStr([]string{"PSYNC", "?", "-1"}).Encode()
 	_, err = conn.Write(psyncEncoded)
 	if err != nil {
 		return fmt.Errorf("failed to send PSYNC command: %w", err)

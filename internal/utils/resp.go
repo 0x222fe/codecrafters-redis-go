@@ -5,7 +5,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 )
 
-func EncodeBulkStrArrToRESP(slice []string) resp.RESPValue {
+func StringsToRESPBulkStr(slice []string) resp.RESPValue {
 	arr := make([]resp.RESPValue, len(slice))
 
 	for i, v := range slice {
