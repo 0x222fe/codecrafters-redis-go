@@ -6,6 +6,7 @@ import (
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/client"
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
 )
@@ -38,6 +39,7 @@ const (
 	XRANGE   request.CommandKey = "XRANGE"
 	XREAD    request.CommandKey = "XREAD"
 	INCR     request.CommandKey = "INCR"
+	MULTI    request.CommandKey = "MULTI"
 )
 
 var (
@@ -57,6 +59,7 @@ var (
 		XRANGE:   {xrangeHandler, cmdTypeRead},
 		XREAD:    {xreadHandler, cmdTypeRead},
 		INCR:     {incrHandler, cmdTypeWrite},
+		MULTI:    {multiHandler, cmdTypeRead},
 	}
 )
 
@@ -77,6 +80,13 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 		isReplica &&
 		!req.Propagated {
 		return errors.New("replica cannot execute write commands")
+	}
+
+	if req.InTxn {
+		req.TxnCommands = append(req.TxnCommands, cmd)
+		encoded := resp.NewRESPString("QUEUED").Encode()
+		writeResponse(req.Client, encoded)
+		return nil
 	}
 
 	err := spec.handler(req, cmd.Args)
