@@ -18,15 +18,17 @@ func xaddHandler(req *request.Request, args []string) error {
 		return fmt.Errorf("XADD requires a key and an ID")
 	}
 
-	stream, ok := req.State.GetStore().GetStream(key)
-
+	var stream *store.RedisStream
+	v, t, ok := req.State.GetStore().Get(key)
 	if !ok {
 		stream = store.NewStream(key)
 		req.State.GetStore().Set(key, stream, store.Stream, nil)
-		err := req.State.GetStore().AddStream(key, stream)
-		if err != nil {
-			return err
+	} else {
+		s, parseOk := v.(*store.RedisStream)
+		if t != store.Stream || !parseOk {
+			return fmt.Errorf("key is not a stream")
 		}
+		stream = s
 	}
 
 	fields := make(map[string]string)

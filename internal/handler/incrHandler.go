@@ -16,7 +16,7 @@ func incrHandler(req *request.Request, args []string) error {
 
 	key := args[0]
 
-	val, ok := req.State.GetStore().Get(key, store.String)
+	val, ok := req.State.GetStore().GetExact(key, store.String)
 	if !ok {
 		req.State.GetStore().Set(key, "1", store.String, nil)
 		res := resp.NewRESPInt(1)

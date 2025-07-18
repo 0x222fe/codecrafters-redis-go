@@ -32,7 +32,12 @@ func xrangeHandler(req *request.Request, args []string) error {
 		end = e.RadixKey()
 	}
 
-	stream, ok := req.State.GetStore().GetStream(key)
+	v, ok := req.State.GetStore().GetExact(key, store.Stream)
+	stream, parseOk := v.(*store.RedisStream)
+	if !ok || !parseOk {
+		return errors.New("key is not a stream")
+	}
+
 	var res resp.RESPValue
 	if ok {
 		entries := stream.Range(start, end)

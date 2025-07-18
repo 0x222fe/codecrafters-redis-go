@@ -36,6 +36,18 @@ func xreadHandler(req *request.Request, args []string) error {
 	}
 	count /= 2
 	keys, idStrs := args[1:1+count], args[1+count:]
+	streams := make([]*store.RedisStream, 0, count)
+	for _, key := range keys {
+		v, _, has := req.State.GetStore().Get(key)
+		stream, parseOk := v.(*store.RedisStream)
+		if has && !parseOk {
+			return errors.New(
+				"WRONGTYPE Operation against a key holding the wrong kind of value",
+			)
+		}
+		streams = append(streams, stream)
+	}
+
 	idPtrs := make([]*store.StreamEntryID, 0, count)
 	for i := range count {
 		if idStrs[i] == "$" {
@@ -53,12 +65,17 @@ func xreadHandler(req *request.Request, args []string) error {
 
 	entryDict, fetchedCount := make(map[string][]*store.StreamEntry), 0
 	for i, key := range keys {
-		stream, ok := req.State.GetStore().GetStream(key)
-		if ok && idPtrs[i] != nil {
+		stream := streams[i]
+		if stream == nil {
+			continue
+		}
+
+		if idPtrs[i] != nil {
 			entries := stream.Range((*idPtrs[i]).RadixKey(), nil)
 			entryDict[key] = entries
 			fetchedCount += len(entries)
 		}
+
 	}
 
 	if fetchedCount == 0 && blockMillis != nil {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
+	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 )
 
 func getHandler(req *request.Request, args []string) error {
@@ -13,11 +14,12 @@ func getHandler(req *request.Request, args []string) error {
 	}
 
 	var res resp.RESPValue
-	value, exists := req.State.GetStore().GetString(args[0])
-	if !exists {
+	value, ok := req.State.GetStore().GetExact(args[0], store.String)
+	str, parseOk := value.(string)
+	if !ok || !parseOk {
 		res = resp.RESPNilArray
 	} else {
-		res = resp.NewRESPString(value)
+		res = resp.NewRESPString(str)
 	}
 
 	return writeResponse(req, res)
