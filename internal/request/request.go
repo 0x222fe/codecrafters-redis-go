@@ -54,6 +54,10 @@ func (r *Request) ExecTransaction() ([]resp.RESPValue, bool, error) {
 	return res, true, nil
 }
 
+func (r *Request) DiscardTransaction() {
+	r.Transaction = nil
+}
+
 func (r *Request) IsInTxn() bool {
 	return r.Transaction != nil
 }

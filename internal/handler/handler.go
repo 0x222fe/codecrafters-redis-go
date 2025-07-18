@@ -44,6 +44,7 @@ const (
 	INCR     request.CommandKey = "INCR"
 	MULTI    request.CommandKey = "MULTI"
 	EXEC     request.CommandKey = "EXEC"
+	DISCARD  request.CommandKey = "DISCARD"
 )
 
 var (
@@ -87,6 +88,16 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 			res := resp.NewRESPArray(resArr)
 			writeResponse(req, res)
 		}
+		return nil
+	}
+
+	if cmd.Name == DISCARD {
+		if !req.IsInTxn() {
+			return errors.New("DISCARD without MULTI")
+		}
+
+		req.DiscardTransaction()
+		writeResponse(req, resp.NewRESPString("OK"))
 		return nil
 	}
 
