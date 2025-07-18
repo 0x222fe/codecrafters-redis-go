@@ -39,7 +39,8 @@ func NewRESPBulkString(s *string) RESPValue {
 	return RESPValue{valType: RESPBulkStr, strVal: s}
 }
 
-func NewRESPError(s string) RESPValue {
+func NewRESPError(err error) RESPValue {
+	s := err.Error()
 	return RESPValue{valType: RESPErr, strVal: &s}
 }
 

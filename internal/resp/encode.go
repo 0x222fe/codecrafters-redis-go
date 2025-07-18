@@ -8,7 +8,7 @@ func (r RESPValue) Encode() []byte {
 		//INFO: strVal should never be nil for respStr and respErr
 		return fmt.Appendf(nil, "+%s\r\n", *r.strVal)
 	case RESPErr:
-		return fmt.Appendf(nil, "-%s\r\n", *r.strVal)
+		return fmt.Appendf(nil, "-ERR %s\r\n", *r.strVal)
 	case RESPBulkStr:
 		if r.strVal != nil {
 			return fmt.Appendf(nil, "$%d\r\n%s\r\n", len(*r.strVal), *r.strVal)

@@ -2,7 +2,6 @@ package request
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/client"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
@@ -46,8 +45,7 @@ func (r *Request) ExecTransaction() ([]resp.RESPValue, bool, error) {
 	for _, cmd := range r.Transaction.Commands {
 		err := cmd.Handler.Handle(r, cmd.Command)
 		if err != nil {
-			fmt.Printf("failed to execute transaction command: %v\n", err)
-			return nil, true, err
+			r.Transaction.WriteResp(resp.NewRESPError(err))
 		}
 	}
 	res := r.Transaction.Responses

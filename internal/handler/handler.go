@@ -71,7 +71,6 @@ var (
 func RunCommand(req *request.Request, cmd request.Command) error {
 	cmdName := string(cmd.Name)
 
-	fmt.Printf("is in transaction: %v, command: %s\n", req.IsInTxn(), cmdName)
 	if cmd.Name == EXEC {
 		if !req.IsInTxn() {
 			return errors.New("EXEC without MULTI")
