@@ -1,4 +1,4 @@
-package command
+package handler
 
 import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"

@@ -14,8 +14,8 @@ import (
 	"strings"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/client"
-	"github.com/0x222fe/codecrafters-redis-go/internal/command"
 	"github.com/0x222fe/codecrafters-redis-go/internal/config"
+	"github.com/0x222fe/codecrafters-redis-go/internal/handler"
 	"github.com/0x222fe/codecrafters-redis-go/internal/rdb"
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
@@ -112,7 +112,7 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 			continue
 		}
 
-		cmd, err := command.FromRESP(respVal)
+		cmd, err := request.ParseCommandFromRESP(respVal)
 		if err != nil {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue
@@ -121,7 +121,7 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 
 		req := request.NewRequest(context.Background(), client, state)
 
-		err = command.RunCommand(req, cmd)
+		err = handler.RunCommand(req, cmd)
 		if err != nil {
 			fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
 			continue
@@ -149,7 +149,7 @@ func serveMaster(appState *state.AppState, conn net.Conn, reader *bufio.Reader) 
 			continue
 		}
 
-		cmd, err := command.FromRESP(respVal)
+		cmd, err := request.ParseCommandFromRESP(respVal)
 		if err != nil {
 			fmt.Printf("Error parsing command from master: %s\n", err.Error())
 			continue
@@ -158,7 +158,7 @@ func serveMaster(appState *state.AppState, conn net.Conn, reader *bufio.Reader) 
 		req := request.NewRequest(context.Background(), client, appState)
 		req.Propagated = true
 
-		err = command.RunCommand(req, cmd)
+		err = handler.RunCommand(req, cmd)
 		if err != nil {
 			fmt.Printf("Error executing command from master: %s\n", err.Error())
 			continue
