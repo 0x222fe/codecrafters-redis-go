@@ -1,3 +1,4 @@
+[![wakatime](https://wakatime.com/badge/user/8482f24b-f7b8-4f2b-9efe-78a2b236c1ac/project/0d054e45-0dc9-4609-a589-eb8aaa07d0e5.svg)](https://wakatime.com/badge/user/8482f24b-f7b8-4f2b-9efe-78a2b236c1ac/project/0d054e45-0dc9-4609-a589-eb8aaa07d0e5)
 [![progress-banner](https://backend.codecrafters.io/progress/redis/b4bef35b-48db-4b17-bf3b-c251ba59c981)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
 
 This is a starting point for Go solutions to the
