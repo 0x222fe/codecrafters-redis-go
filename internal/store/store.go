@@ -120,7 +120,7 @@ func (store *Store) Keys() []string {
 	return keys
 }
 
-func (store *Store) RegisterStreamInsertHandler(streamKey string, handler StreamInsertHandler) uuid.UUID {
+func (store *Store) RegisterStreamInsertHandler(streamKey string, clientID uuid.UUID, handler StreamInsertHandler) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 
@@ -130,9 +130,7 @@ func (store *Store) RegisterStreamInsertHandler(streamKey string, handler Stream
 		store.streamRegistries[streamKey] = registry
 	}
 
-	id := uuid.New()
-	registry[id] = handler
-	return id
+	registry[clientID] = handler
 }
 
 func (store *Store) UnregisterStreamInsertHandler(streamKey string, handlerID uuid.UUID) {

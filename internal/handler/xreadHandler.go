@@ -11,7 +11,6 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
-	"github.com/google/uuid"
 )
 
 func xreadHandler(req *request.Request, args []string) error {
@@ -77,19 +76,14 @@ func xreadHandler(req *request.Request, args []string) error {
 	}
 
 	if fetchedCount == 0 && blockMillis != nil {
-		type handler struct {
-			key string
-			id  uuid.UUID
-		}
 		type streamEntry struct {
 			streamKey string
 			entry     *store.StreamEntry
 		}
 
-		handlers := make([]handler, 0, len(keys))
 		defer func() {
-			for _, h := range handlers {
-				req.State.GetStore().UnregisterStreamInsertHandler(h.key, h.id)
+			for _, key := range keys {
+				req.State.GetStore().UnregisterStreamInsertHandler(key, req.Client.ID)
 			}
 		}()
 
@@ -104,10 +98,9 @@ func xreadHandler(req *request.Request, args []string) error {
 
 		for _, key := range keys {
 			localKey := key
-			id := req.State.GetStore().RegisterStreamInsertHandler(key, func(entry *store.StreamEntry) {
+			req.State.GetStore().RegisterStreamInsertHandler(key, req.Client.ID, func(entry *store.StreamEntry) {
 				doneCh <- streamEntry{streamKey: localKey, entry: entry}
 			})
-			handlers = append(handlers, handler{key: key, id: id})
 		}
 
 		select {
