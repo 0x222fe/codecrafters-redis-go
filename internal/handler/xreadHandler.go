@@ -41,9 +41,7 @@ func xreadHandler(req *request.Request, args []string) error {
 		v, _, has := req.State.GetStore().Get(key)
 		stream, parseOk := v.(*store.RedisStream)
 		if has && !parseOk {
-			return errors.New(
-				"WRONGTYPE Operation against a key holding the wrong kind of value",
-			)
+			return store.ERRWrongType
 		}
 		streams = append(streams, stream)
 	}

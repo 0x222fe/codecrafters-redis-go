@@ -48,6 +48,7 @@ const (
 	LPUSH    request.CommandKey = "LPUSH"
 	RPUSH    request.CommandKey = "RPUSH"
 	LRANGE   request.CommandKey = "LRANGE"
+	LLEN     request.CommandKey = "LLEN"
 )
 
 var (
@@ -71,6 +72,7 @@ var (
 		LPUSH:    {lpushHandler, cmdTypeWrite},
 		RPUSH:    {rpushHandler, cmdTypeWrite},
 		LRANGE:   {lrangeHandler, cmdTypeRead},
+		LLEN:     {llenHandler, cmdTypeRead},
 	}
 )
 

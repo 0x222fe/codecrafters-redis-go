@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -42,6 +43,10 @@ type StoreItem struct {
 	valType  ValueType
 	expireAt *int64
 }
+
+var (
+	ERRWrongType = errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")
+)
 
 func (store *Store) Get(key string) (any, ValueType, bool) {
 	store.mu.Lock()
