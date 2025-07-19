@@ -35,7 +35,7 @@ func lrangeHandler(req *request.Request, args []string) error {
 	}
 
 	values := list.GetRange(start, end)
-	res := utils.StringsToRESPBulkStr(values)
+	res := utils.BulkStringsToRESPArray(values)
 	writeResponse(req, res)
 	return nil
 }

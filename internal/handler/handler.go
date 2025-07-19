@@ -147,7 +147,7 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 	}
 
 	if spec.cmdType == cmdTypeWrite && !isReplica {
-		replicaCommand := utils.StringsToRESPBulkStr(append([]string{cmdName}, cmd.Args...))
+		replicaCommand := utils.BulkStringsToRESPArray(append([]string{cmdName}, cmd.Args...))
 		encoded := replicaCommand.Encode()
 
 		req.State.WriteState(func(s *state.State) {

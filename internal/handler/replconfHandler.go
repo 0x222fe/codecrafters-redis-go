@@ -39,7 +39,7 @@ func replconfGETACK(req *request.Request, args []string) error {
 		offset = s.ReplicationOffset
 	})
 
-	command := utils.StringsToRESPBulkStr([]string{"REPLCONF", "ACK", strconv.Itoa(offset)})
+	command := utils.BulkStringsToRESPArray([]string{"REPLCONF", "ACK", strconv.Itoa(offset)})
 	return writeResponse(req, command)
 }
 

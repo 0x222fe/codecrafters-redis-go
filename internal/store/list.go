@@ -37,31 +37,38 @@ func (l *RedisList) RPush(items ...string) int {
 	return len(l.list)
 }
 
-func (l *RedisList) LPop() (string, bool) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	if len(l.list) == 0 {
-		return "", false
-	}
-
-	item := l.list[0]
-	l.list = l.list[1:]
-	return item, true
-}
-
-func (l *RedisList) RPop() (string, bool) {
+func (l *RedisList) LPop(count int) ([]string, bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	n := len(l.list)
-	if n == 0 {
-		return "", false
+	if n == 0 || count <= 0 {
+		return nil, false
+	}
+	if count > n {
+		count = n
 	}
 
-	item := l.list[n-1]
-	l.list = l.list[:n-1]
-	return item, true
+	items := l.list[:count]
+	l.list = l.list[count:]
+	return items, true
+}
+
+func (l *RedisList) RPop(count int) ([]string, bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	n := len(l.list)
+	if n == 0 || count <= 0 {
+		return nil, false
+	}
+	if count > n {
+		count = n
+	}
+
+	items := l.list[n-count:]
+	l.list = l.list[:n-count]
+	return items, true
 }
 
 func (l *RedisList) Len() int {
