@@ -26,14 +26,12 @@ type StreamInsertHandlerRegistry map[uuid.UUID]StreamInsertHandler
 type Store struct {
 	mu               sync.RWMutex
 	data             map[string]StoreItem
-	streams          map[string]*RedisStream
 	streamRegistries map[string]StreamInsertHandlerRegistry
 }
 
 func NewStore() *Store {
 	return &Store{
 		data:             make(map[string]StoreItem),
-		streams:          make(map[string]*RedisStream),
 		streamRegistries: make(map[string]StreamInsertHandlerRegistry),
 	}
 }
