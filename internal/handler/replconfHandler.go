@@ -61,12 +61,11 @@ func replconfACK(req *request.Request, args []string) error {
 
 	fmt.Printf("Replica %s acknowledged offset %d\n", req.Client.ID, offset)
 
-	select {
-	case <-replica.OffsetChan:
-	default:
+	for {
+		select {
+		case replica.OffsetChan <- offset:
+			return nil
+		case <-replica.OffsetChan:
+		}
 	}
-
-	replica.OffsetChan <- offset
-
-	return nil
 }

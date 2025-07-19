@@ -29,6 +29,10 @@ func rpushHandler(req *request.Request, args []string) error {
 	}
 
 	count := list.RPush(items...)
+	s := req.State.GetStore()
+	for _, item := range items {
+		s.NotifyListPush(key, item)
+	}
 
 	writeResponse(req, resp.NewRESPInt(int64(count)))
 	return nil

@@ -50,6 +50,7 @@ const (
 	LRANGE   request.CommandKey = "LRANGE"
 	LLEN     request.CommandKey = "LLEN"
 	LPOP     request.CommandKey = "LPOP"
+	BLPOP    request.CommandKey = "BLPOP"
 	RPOP     request.CommandKey = "RPOP"
 )
 
@@ -76,6 +77,7 @@ var (
 		LRANGE:   {lrangeHandler, cmdTypeRead},
 		LLEN:     {llenHandler, cmdTypeRead},
 		LPOP:     {lpopHandler, cmdTypeWrite},
+		BLPOP:    {blpopHandler, cmdTypeWrite},
 		RPOP:     {rpopHandler, cmdTypeWrite},
 	}
 )

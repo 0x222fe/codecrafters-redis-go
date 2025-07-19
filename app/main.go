@@ -303,6 +303,7 @@ func initRepHandshake(appState *state.AppState) error {
 	rdbData, err := rdb.ParseRDB(r)
 
 	store := rdbData.MapToStore()
+
 	appState.SetStore(store)
 
 	fmt.Printf("Connected to master server at %s\n", masterAddr)

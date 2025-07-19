@@ -91,9 +91,8 @@ func xreadHandler(req *request.Request, args []string) error {
 		var timeoutCh <-chan time.Time
 
 		if *blockMillis != 0 {
-			ticker := time.NewTicker(time.Duration(*blockMillis) * time.Millisecond)
-			defer ticker.Stop()
-			timeoutCh = ticker.C
+			d := time.Duration(*blockMillis * int(time.Millisecond))
+			timeoutCh = time.After(d)
 		}
 
 		for _, key := range keys {

@@ -94,14 +94,22 @@ func (m *OrderedMap[K, V]) Get(key K) (V, bool) {
 	return n.value, true
 }
 
+func (m *OrderedMap[K, V]) Peek() (V, bool) {
+	if m.head == nil {
+		var zero V
+		return zero, false
+	}
+	return m.head.value, true
+}
+
 func (m *OrderedMap[K, V]) Len() int {
 	return m.length
 }
 
-func (m *OrderedMap[K, V]) ForEach(handler func(key K, value V) (stop bool)) {
+func (m *OrderedMap[K, V]) ForEach(handler func(value V) (stop bool)) {
 	for n := m.head; n != nil; n = n.next {
 		node := n
-		if handler(node.key, node.value) {
+		if handler(node.value) {
 			break
 		}
 	}

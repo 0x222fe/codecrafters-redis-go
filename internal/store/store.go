@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/0x222fe/codecrafters-redis-go/internal/types"
 	"github.com/google/uuid"
 )
 
@@ -23,16 +24,20 @@ const (
 type StreamInsertHandler func(entry *StreamEntry)
 type StreamInsertHandlerRegistry map[uuid.UUID]StreamInsertHandler
 
+type ListPushChanRgistry = types.OrderedMap[uuid.UUID, chan string]
+
 type Store struct {
 	mu               sync.RWMutex
 	data             map[string]StoreItem
 	streamRegistries map[string]StreamInsertHandlerRegistry
+	listRegistries   map[string]*ListPushChanRgistry
 }
 
 func NewStore() *Store {
 	return &Store{
 		data:             make(map[string]StoreItem),
 		streamRegistries: make(map[string]StreamInsertHandlerRegistry),
+		listRegistries:   make(map[string]*ListPushChanRgistry),
 	}
 }
 
@@ -149,5 +154,47 @@ func (store *Store) IterateStreamInsertHandlers(streamKey string, entry *StreamE
 
 	for _, handler := range registry {
 		handler(entry)
+	}
+}
+
+func (store *Store) RegisterListPushHandler(listKey string, clientID uuid.UUID, ch chan string) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	registry, ok := store.listRegistries[listKey]
+	if !ok {
+		registry = types.NewMap[uuid.UUID, chan string]()
+		store.listRegistries[listKey] = registry
+	}
+
+	registry.Set(clientID, ch)
+}
+
+func (store *Store) UnregisterListPushHandler(listKey string, clientID uuid.UUID) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	if registry, ok := store.listRegistries[listKey]; ok {
+		registry.Delete(clientID)
+	}
+}
+
+func (store *Store) NotifyListPush(listKey string, value string) {
+	store.mu.RLock()
+	defer store.mu.RUnlock()
+
+	reg, ok := store.listRegistries[listKey]
+	if !ok {
+		return
+	}
+
+	ch, ok := reg.Peek()
+	if !ok {
+		return
+	}
+
+	select {
+	case ch <- value:
+	default:
 	}
 }

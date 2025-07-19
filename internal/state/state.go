@@ -55,6 +55,7 @@ func (s *AppState) WriteState(f func(s *State)) {
 	f(s.state)
 }
 
+// SetStore should only be called during replication/master handshake
 func (s *AppState) SetStore(store *store.Store) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

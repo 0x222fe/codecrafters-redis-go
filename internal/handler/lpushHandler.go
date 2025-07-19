@@ -30,6 +30,11 @@ func lpushHandler(req *request.Request, args []string) error {
 
 	count := list.LPush(items...)
 
+	s := req.State.GetStore()
+	for _, item := range items {
+		s.NotifyListPush(key, item)
+	}
+
 	writeResponse(req, resp.NewRESPInt(int64(count)))
 	return nil
 }
