@@ -58,7 +58,7 @@ const (
 
 var (
 	handlerReg = map[request.CommandKey]commandSpec{
-		PING:      {handler: pingHandler, cmdType: cmdTypeRead},
+		PING:      {handler: pingHandler, cmdType: cmdTypeRead, allowedInSubMode: true},
 		ECHO:      {handler: echoHandler, cmdType: cmdTypeRead},
 		SET:       {handler: setHandler, cmdType: cmdTypeWrite},
 		GET:       {handler: getHandler, cmdType: cmdTypeRead},
