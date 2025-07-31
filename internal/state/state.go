@@ -141,6 +141,31 @@ func (s *AppState) AddSubscriber(c *client.Client, channel string) *Subscriber {
 	return sub
 }
 
+func (s *AppState) UnsubChannel(id uuid.UUID, channel string) *Subscriber {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	sub, ok := s.subscribers[id]
+	if !ok {
+		return nil
+	}
+
+	chanMap, ok := s.channelSubs[channel]
+	if !ok {
+		return sub
+	}
+
+	_, ok = chanMap[id]
+	if !ok {
+		return sub
+	}
+
+	delete(chanMap, id)
+	delete(sub.Channels, channel)
+
+	return sub
+}
+
 func (s *AppState) RemoveSubscriber(id uuid.UUID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -28,62 +28,64 @@ const (
 )
 
 const (
-	PING      request.CommandKey = "PING"
-	ECHO      request.CommandKey = "ECHO"
-	SET       request.CommandKey = "SET"
-	GET       request.CommandKey = "GET"
-	CONFIG    request.CommandKey = "CONFIG"
-	KEYS      request.CommandKey = "KEYS"
-	INFO      request.CommandKey = "INFO"
-	REPLCONF  request.CommandKey = "REPLCONF"
-	PSYNC     request.CommandKey = "PSYNC"
-	WAIT      request.CommandKey = "WAIT"
-	TYPE      request.CommandKey = "TYPE"
-	XADD      request.CommandKey = "XADD"
-	XRANGE    request.CommandKey = "XRANGE"
-	XREAD     request.CommandKey = "XREAD"
-	INCR      request.CommandKey = "INCR"
-	MULTI     request.CommandKey = "MULTI"
-	EXEC      request.CommandKey = "EXEC"
-	DISCARD   request.CommandKey = "DISCARD"
-	LPUSH     request.CommandKey = "LPUSH"
-	RPUSH     request.CommandKey = "RPUSH"
-	LRANGE    request.CommandKey = "LRANGE"
-	LLEN      request.CommandKey = "LLEN"
-	LPOP      request.CommandKey = "LPOP"
-	BLPOP     request.CommandKey = "BLPOP"
-	RPOP      request.CommandKey = "RPOP"
-	SUBSCRIBE request.CommandKey = "SUBSCRIBE"
-	PUBLISH   request.CommandKey = "PUBLISH"
+	PING        request.CommandKey = "PING"
+	ECHO        request.CommandKey = "ECHO"
+	SET         request.CommandKey = "SET"
+	GET         request.CommandKey = "GET"
+	CONFIG      request.CommandKey = "CONFIG"
+	KEYS        request.CommandKey = "KEYS"
+	INFO        request.CommandKey = "INFO"
+	REPLCONF    request.CommandKey = "REPLCONF"
+	PSYNC       request.CommandKey = "PSYNC"
+	WAIT        request.CommandKey = "WAIT"
+	TYPE        request.CommandKey = "TYPE"
+	XADD        request.CommandKey = "XADD"
+	XRANGE      request.CommandKey = "XRANGE"
+	XREAD       request.CommandKey = "XREAD"
+	INCR        request.CommandKey = "INCR"
+	MULTI       request.CommandKey = "MULTI"
+	EXEC        request.CommandKey = "EXEC"
+	DISCARD     request.CommandKey = "DISCARD"
+	LPUSH       request.CommandKey = "LPUSH"
+	RPUSH       request.CommandKey = "RPUSH"
+	LRANGE      request.CommandKey = "LRANGE"
+	LLEN        request.CommandKey = "LLEN"
+	LPOP        request.CommandKey = "LPOP"
+	BLPOP       request.CommandKey = "BLPOP"
+	RPOP        request.CommandKey = "RPOP"
+	SUBSCRIBE   request.CommandKey = "SUBSCRIBE"
+	UNSUBSCRIBE request.CommandKey = "UNSUBSCRIBE"
+	PUBLISH     request.CommandKey = "PUBLISH"
 )
 
 var (
 	handlerReg = map[request.CommandKey]commandSpec{
-		PING:      {handler: pingHandler, allowedInSubMode: true},
-		ECHO:      {handler: echoHandler},
-		SET:       {handler: setHandler, cmdType: cmdTypeWrite},
-		GET:       {handler: getHandler},
-		CONFIG:    {handler: configHandler},
-		KEYS:      {handler: keysHandler},
-		INFO:      {handler: infoHandler},
-		REPLCONF:  {handler: replconfHandler},
-		PSYNC:     {handler: psyncHandler},
-		WAIT:      {handler: waitHandler},
-		TYPE:      {handler: typeHandler},
-		XADD:      {handler: xaddHandler, cmdType: cmdTypeWrite},
-		XRANGE:    {handler: xrangeHandler},
-		XREAD:     {handler: xreadHandler},
-		INCR:      {handler: incrHandler, cmdType: cmdTypeWrite},
-		MULTI:     {handler: multiHandler},
-		LPUSH:     {handler: lpushHandler, cmdType: cmdTypeWrite},
-		RPUSH:     {handler: rpushHandler, cmdType: cmdTypeWrite},
-		LRANGE:    {handler: lrangeHandler},
-		LLEN:      {handler: llenHandler},
-		LPOP:      {handler: lpopHandler, cmdType: cmdTypeWrite},
-		BLPOP:     {handler: blpopHandler, cmdType: cmdTypeWrite},
-		RPOP:      {handler: rpopHandler, cmdType: cmdTypeWrite},
-		SUBSCRIBE: {handler: subscribeHandler, allowedInSubMode: true},
-		PUBLISH:   {handler: publishHandler, cmdType: cmdTypeWrite, allowedInSubMode: true},
+		PING:        {handler: pingHandler, allowedInSubMode: true},
+		ECHO:        {handler: echoHandler},
+		SET:         {handler: setHandler, cmdType: cmdTypeWrite},
+		GET:         {handler: getHandler},
+		CONFIG:      {handler: configHandler},
+		KEYS:        {handler: keysHandler},
+		INFO:        {handler: infoHandler},
+		REPLCONF:    {handler: replconfHandler},
+		PSYNC:       {handler: psyncHandler},
+		WAIT:        {handler: waitHandler},
+		TYPE:        {handler: typeHandler},
+		XADD:        {handler: xaddHandler, cmdType: cmdTypeWrite},
+		XRANGE:      {handler: xrangeHandler},
+		XREAD:       {handler: xreadHandler},
+		INCR:        {handler: incrHandler, cmdType: cmdTypeWrite},
+		MULTI:       {handler: multiHandler},
+		LPUSH:       {handler: lpushHandler, cmdType: cmdTypeWrite},
+		RPUSH:       {handler: rpushHandler, cmdType: cmdTypeWrite},
+		LRANGE:      {handler: lrangeHandler},
+		LLEN:        {handler: llenHandler},
+		LPOP:        {handler: lpopHandler, cmdType: cmdTypeWrite},
+		BLPOP:       {handler: blpopHandler, cmdType: cmdTypeWrite},
+		RPOP:        {handler: rpopHandler, cmdType: cmdTypeWrite},
+		SUBSCRIBE:   {handler: subscribeHandler, allowedInSubMode: true},
+		UNSUBSCRIBE: {handler: unsubscribeHandler, allowedInSubMode: true},
+		PUBLISH:     {handler: publishHandler, cmdType: cmdTypeWrite, allowedInSubMode: true},
 	}
 )
 
