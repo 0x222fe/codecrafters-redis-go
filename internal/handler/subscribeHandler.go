@@ -26,11 +26,5 @@ func subscribeHandler(req *request.Request, args []string) error {
 		req.Client.WriteResp(resp.NewRESPArray(msgArr))
 	}
 
-	for {
-		select {
-		case <-sub.MsgChan:
-		case <-req.Ctx.Done():
-			return nil
-		}
-	}
+	return nil
 }
