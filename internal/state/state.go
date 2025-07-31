@@ -110,6 +110,15 @@ func (s *AppState) AddSubscriber(c *client.Client, channel string) *Subscriber {
 			MsgChan:  make(chan PubSubMsg, subChanBufSize),
 		}
 		s.subscribers[c.ID] = sub
+		go func() {
+			for {
+				select {
+				case <-sub.MsgChan:
+				case <-sub.Ctx.Done():
+					return
+				}
+			}
+		}()
 	}
 	sub.Channels[channel] = struct{}{}
 
