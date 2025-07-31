@@ -151,18 +151,25 @@ func (s *AppState) RemoveSubscriber(id uuid.UUID) {
 	}
 }
 
-func (s *AppState) Publish(channel string, payload []byte) {
+func (s *AppState) Publish(channel string, payload []byte) int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	sent := 0
 	chanMap, ok := s.channelSubs[channel]
 	if !ok {
-		return
+		return sent
 	}
 
 	for _, sub := range chanMap {
-		sub.Client.Write(payload)
+		select {
+		case sub.MsgChan <- PubSubMsg{Channel: channel, Payload: payload}:
+			sent++
+		default:
+		}
 	}
+
+	return sent
 }
 
 func (s *AppState) AddReplica(c *client.Client) {

@@ -54,34 +54,36 @@ const (
 	BLPOP     request.CommandKey = "BLPOP"
 	RPOP      request.CommandKey = "RPOP"
 	SUBSCRIBE request.CommandKey = "SUBSCRIBE"
+	PUBLISH   request.CommandKey = "PUBLISH"
 )
 
 var (
 	handlerReg = map[request.CommandKey]commandSpec{
-		PING:      {handler: pingHandler, cmdType: cmdTypeRead, allowedInSubMode: true},
-		ECHO:      {handler: echoHandler, cmdType: cmdTypeRead},
+		PING:      {handler: pingHandler, allowedInSubMode: true},
+		ECHO:      {handler: echoHandler},
 		SET:       {handler: setHandler, cmdType: cmdTypeWrite},
-		GET:       {handler: getHandler, cmdType: cmdTypeRead},
-		CONFIG:    {handler: configHandler, cmdType: cmdTypeRead},
-		KEYS:      {handler: keysHandler, cmdType: cmdTypeRead},
-		INFO:      {handler: infoHandler, cmdType: cmdTypeRead},
-		REPLCONF:  {handler: replconfHandler, cmdType: cmdTypeRead},
-		PSYNC:     {handler: psyncHandler, cmdType: cmdTypeRead},
-		WAIT:      {handler: waitHandler, cmdType: cmdTypeRead},
-		TYPE:      {handler: typeHandler, cmdType: cmdTypeRead},
+		GET:       {handler: getHandler},
+		CONFIG:    {handler: configHandler},
+		KEYS:      {handler: keysHandler},
+		INFO:      {handler: infoHandler},
+		REPLCONF:  {handler: replconfHandler},
+		PSYNC:     {handler: psyncHandler},
+		WAIT:      {handler: waitHandler},
+		TYPE:      {handler: typeHandler},
 		XADD:      {handler: xaddHandler, cmdType: cmdTypeWrite},
-		XRANGE:    {handler: xrangeHandler, cmdType: cmdTypeRead},
-		XREAD:     {handler: xreadHandler, cmdType: cmdTypeRead},
+		XRANGE:    {handler: xrangeHandler},
+		XREAD:     {handler: xreadHandler},
 		INCR:      {handler: incrHandler, cmdType: cmdTypeWrite},
-		MULTI:     {handler: multiHandler, cmdType: cmdTypeRead},
+		MULTI:     {handler: multiHandler},
 		LPUSH:     {handler: lpushHandler, cmdType: cmdTypeWrite},
 		RPUSH:     {handler: rpushHandler, cmdType: cmdTypeWrite},
-		LRANGE:    {handler: lrangeHandler, cmdType: cmdTypeRead},
-		LLEN:      {handler: llenHandler, cmdType: cmdTypeRead},
+		LRANGE:    {handler: lrangeHandler},
+		LLEN:      {handler: llenHandler},
 		LPOP:      {handler: lpopHandler, cmdType: cmdTypeWrite},
 		BLPOP:     {handler: blpopHandler, cmdType: cmdTypeWrite},
 		RPOP:      {handler: rpopHandler, cmdType: cmdTypeWrite},
-		SUBSCRIBE: {handler: subscribeHandler, cmdType: cmdTypeRead, allowedInSubMode: true},
+		SUBSCRIBE: {handler: subscribeHandler, allowedInSubMode: true},
+		PUBLISH:   {handler: publishHandler, cmdType: cmdTypeWrite, allowedInSubMode: true},
 	}
 )
 
