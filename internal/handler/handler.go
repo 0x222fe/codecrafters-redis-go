@@ -27,58 +27,60 @@ const (
 )
 
 const (
-	PING     request.CommandKey = "PING"
-	ECHO     request.CommandKey = "ECHO"
-	SET      request.CommandKey = "SET"
-	GET      request.CommandKey = "GET"
-	CONFIG   request.CommandKey = "CONFIG"
-	KEYS     request.CommandKey = "KEYS"
-	INFO     request.CommandKey = "INFO"
-	REPLCONF request.CommandKey = "REPLCONF"
-	PSYNC    request.CommandKey = "PSYNC"
-	WAIT     request.CommandKey = "WAIT"
-	TYPE     request.CommandKey = "TYPE"
-	XADD     request.CommandKey = "XADD"
-	XRANGE   request.CommandKey = "XRANGE"
-	XREAD    request.CommandKey = "XREAD"
-	INCR     request.CommandKey = "INCR"
-	MULTI    request.CommandKey = "MULTI"
-	EXEC     request.CommandKey = "EXEC"
-	DISCARD  request.CommandKey = "DISCARD"
-	LPUSH    request.CommandKey = "LPUSH"
-	RPUSH    request.CommandKey = "RPUSH"
-	LRANGE   request.CommandKey = "LRANGE"
-	LLEN     request.CommandKey = "LLEN"
-	LPOP     request.CommandKey = "LPOP"
-	BLPOP    request.CommandKey = "BLPOP"
-	RPOP     request.CommandKey = "RPOP"
+	PING      request.CommandKey = "PING"
+	ECHO      request.CommandKey = "ECHO"
+	SET       request.CommandKey = "SET"
+	GET       request.CommandKey = "GET"
+	CONFIG    request.CommandKey = "CONFIG"
+	KEYS      request.CommandKey = "KEYS"
+	INFO      request.CommandKey = "INFO"
+	REPLCONF  request.CommandKey = "REPLCONF"
+	PSYNC     request.CommandKey = "PSYNC"
+	WAIT      request.CommandKey = "WAIT"
+	TYPE      request.CommandKey = "TYPE"
+	XADD      request.CommandKey = "XADD"
+	XRANGE    request.CommandKey = "XRANGE"
+	XREAD     request.CommandKey = "XREAD"
+	INCR      request.CommandKey = "INCR"
+	MULTI     request.CommandKey = "MULTI"
+	EXEC      request.CommandKey = "EXEC"
+	DISCARD   request.CommandKey = "DISCARD"
+	LPUSH     request.CommandKey = "LPUSH"
+	RPUSH     request.CommandKey = "RPUSH"
+	LRANGE    request.CommandKey = "LRANGE"
+	LLEN      request.CommandKey = "LLEN"
+	LPOP      request.CommandKey = "LPOP"
+	BLPOP     request.CommandKey = "BLPOP"
+	RPOP      request.CommandKey = "RPOP"
+	SUBSCRIBE request.CommandKey = "SUBSCRIBE"
 )
 
 var (
 	handlerReg = map[request.CommandKey]commandSpec{
-		PING:     {pingHandler, cmdTypeRead},
-		ECHO:     {echoHandler, cmdTypeRead},
-		SET:      {setHandler, cmdTypeWrite},
-		GET:      {getHandler, cmdTypeRead},
-		CONFIG:   {configHandler, cmdTypeRead},
-		KEYS:     {keysHandler, cmdTypeRead},
-		INFO:     {infoHandler, cmdTypeRead},
-		REPLCONF: {replconfHandler, cmdTypeRead},
-		PSYNC:    {psyncHandler, cmdTypeRead},
-		WAIT:     {waitHandler, cmdTypeRead},
-		TYPE:     {typeHandler, cmdTypeRead},
-		XADD:     {xaddHandler, cmdTypeWrite},
-		XRANGE:   {xrangeHandler, cmdTypeRead},
-		XREAD:    {xreadHandler, cmdTypeRead},
-		INCR:     {incrHandler, cmdTypeWrite},
-		MULTI:    {multiHandler, cmdTypeRead},
-		LPUSH:    {lpushHandler, cmdTypeWrite},
-		RPUSH:    {rpushHandler, cmdTypeWrite},
-		LRANGE:   {lrangeHandler, cmdTypeRead},
-		LLEN:     {llenHandler, cmdTypeRead},
-		LPOP:     {lpopHandler, cmdTypeWrite},
-		BLPOP:    {blpopHandler, cmdTypeWrite},
-		RPOP:     {rpopHandler, cmdTypeWrite},
+		PING:      {pingHandler, cmdTypeRead},
+		ECHO:      {echoHandler, cmdTypeRead},
+		SET:       {setHandler, cmdTypeWrite},
+		GET:       {getHandler, cmdTypeRead},
+		CONFIG:    {configHandler, cmdTypeRead},
+		KEYS:      {keysHandler, cmdTypeRead},
+		INFO:      {infoHandler, cmdTypeRead},
+		REPLCONF:  {replconfHandler, cmdTypeRead},
+		PSYNC:     {psyncHandler, cmdTypeRead},
+		WAIT:      {waitHandler, cmdTypeRead},
+		TYPE:      {typeHandler, cmdTypeRead},
+		XADD:      {xaddHandler, cmdTypeWrite},
+		XRANGE:    {xrangeHandler, cmdTypeRead},
+		XREAD:     {xreadHandler, cmdTypeRead},
+		INCR:      {incrHandler, cmdTypeWrite},
+		MULTI:     {multiHandler, cmdTypeRead},
+		LPUSH:     {lpushHandler, cmdTypeWrite},
+		RPUSH:     {rpushHandler, cmdTypeWrite},
+		LRANGE:    {lrangeHandler, cmdTypeRead},
+		LLEN:      {llenHandler, cmdTypeRead},
+		LPOP:      {lpopHandler, cmdTypeWrite},
+		BLPOP:     {blpopHandler, cmdTypeWrite},
+		RPOP:      {rpopHandler, cmdTypeWrite},
+		SUBSCRIBE: {subscribeHandler, cmdTypeRead},
 	}
 )
 

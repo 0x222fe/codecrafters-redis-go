@@ -66,6 +66,9 @@ func replconfACK(req *request.Request, args []string) error {
 		case replica.OffsetChan <- offset:
 			return nil
 		case <-replica.OffsetChan:
+			// Channel full, drain and retry
+		case <-replica.Ctx.Done():
+			return errors.New("replica context canceled")
 		}
 	}
 }
