@@ -13,8 +13,8 @@ type Request struct {
 	Client      *client.Client
 	State       *state.AppState
 	Transaction *Transaction
-	// Wether this request is propagated from master
-	Propagated bool
+	Propagated  bool
+	SubMode     bool
 }
 
 func NewRequest(ctx context.Context, client *client.Client, state *state.AppState) *Request {

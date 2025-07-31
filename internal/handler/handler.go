@@ -12,8 +12,9 @@ import (
 
 type commandType int
 type commandSpec struct {
-	handler commandHandler
-	cmdType commandType
+	handler          commandHandler
+	cmdType          commandType
+	allowedInSubMode bool
 }
 type commandHandler func(req *request.Request, args []string) error
 
@@ -57,30 +58,30 @@ const (
 
 var (
 	handlerReg = map[request.CommandKey]commandSpec{
-		PING:      {pingHandler, cmdTypeRead},
-		ECHO:      {echoHandler, cmdTypeRead},
-		SET:       {setHandler, cmdTypeWrite},
-		GET:       {getHandler, cmdTypeRead},
-		CONFIG:    {configHandler, cmdTypeRead},
-		KEYS:      {keysHandler, cmdTypeRead},
-		INFO:      {infoHandler, cmdTypeRead},
-		REPLCONF:  {replconfHandler, cmdTypeRead},
-		PSYNC:     {psyncHandler, cmdTypeRead},
-		WAIT:      {waitHandler, cmdTypeRead},
-		TYPE:      {typeHandler, cmdTypeRead},
-		XADD:      {xaddHandler, cmdTypeWrite},
-		XRANGE:    {xrangeHandler, cmdTypeRead},
-		XREAD:     {xreadHandler, cmdTypeRead},
-		INCR:      {incrHandler, cmdTypeWrite},
-		MULTI:     {multiHandler, cmdTypeRead},
-		LPUSH:     {lpushHandler, cmdTypeWrite},
-		RPUSH:     {rpushHandler, cmdTypeWrite},
-		LRANGE:    {lrangeHandler, cmdTypeRead},
-		LLEN:      {llenHandler, cmdTypeRead},
-		LPOP:      {lpopHandler, cmdTypeWrite},
-		BLPOP:     {blpopHandler, cmdTypeWrite},
-		RPOP:      {rpopHandler, cmdTypeWrite},
-		SUBSCRIBE: {subscribeHandler, cmdTypeRead},
+		PING:      {handler: pingHandler, cmdType: cmdTypeRead},
+		ECHO:      {handler: echoHandler, cmdType: cmdTypeRead},
+		SET:       {handler: setHandler, cmdType: cmdTypeWrite},
+		GET:       {handler: getHandler, cmdType: cmdTypeRead},
+		CONFIG:    {handler: configHandler, cmdType: cmdTypeRead},
+		KEYS:      {handler: keysHandler, cmdType: cmdTypeRead},
+		INFO:      {handler: infoHandler, cmdType: cmdTypeRead},
+		REPLCONF:  {handler: replconfHandler, cmdType: cmdTypeRead},
+		PSYNC:     {handler: psyncHandler, cmdType: cmdTypeRead},
+		WAIT:      {handler: waitHandler, cmdType: cmdTypeRead},
+		TYPE:      {handler: typeHandler, cmdType: cmdTypeRead},
+		XADD:      {handler: xaddHandler, cmdType: cmdTypeWrite},
+		XRANGE:    {handler: xrangeHandler, cmdType: cmdTypeRead},
+		XREAD:     {handler: xreadHandler, cmdType: cmdTypeRead},
+		INCR:      {handler: incrHandler, cmdType: cmdTypeWrite},
+		MULTI:     {handler: multiHandler, cmdType: cmdTypeRead},
+		LPUSH:     {handler: lpushHandler, cmdType: cmdTypeWrite},
+		RPUSH:     {handler: rpushHandler, cmdType: cmdTypeWrite},
+		LRANGE:    {handler: lrangeHandler, cmdType: cmdTypeRead},
+		LLEN:      {handler: llenHandler, cmdType: cmdTypeRead},
+		LPOP:      {handler: lpopHandler, cmdType: cmdTypeWrite},
+		BLPOP:     {handler: blpopHandler, cmdType: cmdTypeWrite},
+		RPOP:      {handler: rpopHandler, cmdType: cmdTypeWrite},
+		SUBSCRIBE: {handler: subscribeHandler, cmdType: cmdTypeRead, allowedInSubMode: true},
 	}
 )
 
@@ -143,6 +144,10 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 		res := resp.NewRESPString("QUEUED")
 		writeResponse(req, res)
 		return nil
+	}
+
+	if req.SubMode && !spec.allowedInSubMode {
+		return fmt.Errorf("Can't execute '%s': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context", cmdName)
 	}
 
 	err := spec.handler(req, cmd.Args)

@@ -26,5 +26,7 @@ func subscribeHandler(req *request.Request, args []string) error {
 		req.Client.WriteResp(resp.NewRESPArray(msgArr))
 	}
 
+	req.SubMode = true
+
 	return nil
 }
