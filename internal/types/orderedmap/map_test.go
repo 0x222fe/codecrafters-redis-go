@@ -1,4 +1,4 @@
-package types
+package orderedmap
 
 import (
 	"reflect"
@@ -39,7 +39,7 @@ func TestOrderedMap_BasicOps(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewMap[int, int]()
+			m := New[int, int]()
 			for _, op := range tt.ops {
 				m.Set(op.k, op.v)
 			}
@@ -80,7 +80,7 @@ func TestOrderedMap_Delete(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewMap[int, int]()
+			m := New[int, int]()
 			for _, kv := range tt.set {
 				m.Set(kv.k, kv.v)
 			}
@@ -113,7 +113,7 @@ func TestOrderedMap_KeysValuesOrder(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewMap[int, string]()
+			m := New[int, string]()
 			for _, item := range tt.items {
 				m.Set(item.k, item.v)
 			}
@@ -159,7 +159,7 @@ func TestOrderedMap_ForEach(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewMap[int, string]()
+			m := New[int, string]()
 			for _, item := range tt.items {
 				m.Set(item.k, item.v)
 			}

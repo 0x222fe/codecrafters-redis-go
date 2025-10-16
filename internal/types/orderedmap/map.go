@@ -1,4 +1,4 @@
-package types
+package orderedmap
 
 type OrderedMap[K comparable, V any] struct {
 	head, tail *node[K, V]
@@ -13,7 +13,7 @@ type node[K comparable, V any] struct {
 	next  *node[K, V]
 }
 
-func NewMap[K comparable, V any]() *OrderedMap[K, V] {
+func New[K comparable, V any]() *OrderedMap[K, V] {
 	return &OrderedMap[K, V]{
 		head:   nil,
 		tail:   nil,
@@ -106,10 +106,10 @@ func (m *OrderedMap[K, V]) Len() int {
 	return m.length
 }
 
-func (m *OrderedMap[K, V]) ForEach(handler func(value V) (stop bool)) {
+func (m *OrderedMap[K, V]) ForEach(handler func(key K, value V) (stop bool)) {
 	for n := m.head; n != nil; n = n.next {
 		node := n
-		if handler(node.value) {
+		if handler(node.key, node.value) {
 			break
 		}
 	}

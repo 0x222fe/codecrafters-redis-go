@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/types"
+	"github.com/0x222fe/codecrafters-redis-go/internal/types/orderedmap"
 	"github.com/google/uuid"
 )
 
@@ -24,18 +24,26 @@ const (
 type StreamInsertHandler func(entry *StreamEntry)
 type StreamInsertHandlerRegistry map[uuid.UUID]StreamInsertHandler
 
-type ListPushChanRgistry = types.OrderedMap[uuid.UUID, chan string]
+type ListPushChanRgistry = orderedmap.OrderedMap[uuid.UUID, chan string]
 
 type Store struct {
-	mu               sync.RWMutex
-	data             map[string]StoreItem
+	dataMu sync.RWMutex
+	data   map[string]StoreItem
+
+	sortedSetMu      sync.RWMutex
+	sortedSetEntries map[string]*sortedSetEntry
+
+	streamMu         sync.RWMutex
 	streamRegistries map[string]StreamInsertHandlerRegistry
-	listRegistries   map[string]*ListPushChanRgistry
+
+	listMu         sync.RWMutex
+	listRegistries map[string]*ListPushChanRgistry
 }
 
 func NewStore() *Store {
 	return &Store{
 		data:             make(map[string]StoreItem),
+		sortedSetEntries: make(map[string]*sortedSetEntry),
 		streamRegistries: make(map[string]StreamInsertHandlerRegistry),
 		listRegistries:   make(map[string]*ListPushChanRgistry),
 	}
@@ -52,8 +60,8 @@ var (
 )
 
 func (store *Store) Get(key string) (any, ValueType, bool) {
-	store.mu.Lock()
-	defer store.mu.Unlock()
+	store.dataMu.Lock()
+	defer store.dataMu.Unlock()
 
 	item, ok := store.data[key]
 
@@ -83,8 +91,8 @@ func (store *Store) GetExact(key string, valType ValueType) (any, bool) {
 }
 
 func (store *Store) Set(key string, val any, valType ValueType, expireAt *int64) {
-	store.mu.Lock()
-	defer store.mu.Unlock()
+	store.dataMu.Lock()
+	defer store.dataMu.Unlock()
 
 	store.data[key] = StoreItem{
 		val:      val,
@@ -94,8 +102,8 @@ func (store *Store) Set(key string, val any, valType ValueType, expireAt *int64)
 }
 
 func (store *Store) Type(key string) string {
-	store.mu.RLock()
-	defer store.mu.RUnlock()
+	store.dataMu.RLock()
+	defer store.dataMu.RUnlock()
 
 	item, ok := store.data[key]
 	if !ok {
@@ -103,9 +111,9 @@ func (store *Store) Type(key string) string {
 	}
 
 	if item.expireAt != nil && *item.expireAt < time.Now().UnixMilli() {
-		store.mu.Lock()
+		store.dataMu.Lock()
 		delete(store.data, key)
-		store.mu.Unlock()
+		store.dataMu.Unlock()
 		return string(None)
 	}
 
@@ -113,8 +121,8 @@ func (store *Store) Type(key string) string {
 }
 
 func (store *Store) Keys() []string {
-	store.mu.RLock()
-	defer store.mu.RUnlock()
+	store.dataMu.RLock()
+	defer store.dataMu.RUnlock()
 
 	keys := make([]string, 0, len(store.data))
 	for key := range store.data {
@@ -124,8 +132,8 @@ func (store *Store) Keys() []string {
 }
 
 func (store *Store) RegisterStreamInsertHandler(streamKey string, clientID uuid.UUID, handler StreamInsertHandler) {
-	store.mu.Lock()
-	defer store.mu.Unlock()
+	store.streamMu.Lock()
+	defer store.streamMu.Unlock()
 
 	registry, ok := store.streamRegistries[streamKey]
 	if !ok {
@@ -137,16 +145,16 @@ func (store *Store) RegisterStreamInsertHandler(streamKey string, clientID uuid.
 }
 
 func (store *Store) UnregisterStreamInsertHandler(streamKey string, handlerID uuid.UUID) {
-	store.mu.Lock()
-	defer store.mu.Unlock()
+	store.streamMu.Lock()
+	defer store.streamMu.Unlock()
 	if registry, ok := store.streamRegistries[streamKey]; ok {
 		delete(registry, handlerID)
 	}
 }
 
 func (store *Store) IterateStreamInsertHandlers(streamKey string, entry *StreamEntry) {
-	store.mu.RLock()
-	defer store.mu.RUnlock()
+	store.streamMu.RLock()
+	defer store.streamMu.RUnlock()
 	registry, ok := store.streamRegistries[streamKey]
 	if !ok {
 		return
@@ -158,12 +166,12 @@ func (store *Store) IterateStreamInsertHandlers(streamKey string, entry *StreamE
 }
 
 func (store *Store) RegisterListPushHandler(listKey string, clientID uuid.UUID, ch chan string) {
-	store.mu.Lock()
-	defer store.mu.Unlock()
+	store.listMu.Lock()
+	defer store.listMu.Unlock()
 
 	registry, ok := store.listRegistries[listKey]
 	if !ok {
-		registry = types.NewMap[uuid.UUID, chan string]()
+		registry = orderedmap.New[uuid.UUID, chan string]()
 		store.listRegistries[listKey] = registry
 	}
 
@@ -171,8 +179,8 @@ func (store *Store) RegisterListPushHandler(listKey string, clientID uuid.UUID, 
 }
 
 func (store *Store) UnregisterListPushHandler(listKey string, clientID uuid.UUID) {
-	store.mu.Lock()
-	defer store.mu.Unlock()
+	store.listMu.Lock()
+	defer store.listMu.Unlock()
 
 	if registry, ok := store.listRegistries[listKey]; ok {
 		registry.Delete(clientID)
@@ -180,8 +188,8 @@ func (store *Store) UnregisterListPushHandler(listKey string, clientID uuid.UUID
 }
 
 func (store *Store) NotifyListPush(listKey string, value string) {
-	store.mu.RLock()
-	defer store.mu.RUnlock()
+	store.listMu.RLock()
+	defer store.listMu.RUnlock()
 
 	reg, ok := store.listRegistries[listKey]
 	if !ok {

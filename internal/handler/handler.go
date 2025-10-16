@@ -56,6 +56,7 @@ const (
 	SUBSCRIBE   request.CommandKey = "SUBSCRIBE"
 	UNSUBSCRIBE request.CommandKey = "UNSUBSCRIBE"
 	PUBLISH     request.CommandKey = "PUBLISH"
+	ZADD        request.CommandKey = "ZADD"
 )
 
 var (
@@ -86,6 +87,7 @@ var (
 		SUBSCRIBE:   {handler: subscribeHandler, allowedInSubMode: true},
 		UNSUBSCRIBE: {handler: unsubscribeHandler, allowedInSubMode: true},
 		PUBLISH:     {handler: publishHandler, cmdType: cmdTypeWrite, allowedInSubMode: true},
+		ZADD:        {handler: zaddHandler, cmdType: cmdTypeWrite},
 	}
 )
 

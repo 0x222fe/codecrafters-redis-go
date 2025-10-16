@@ -17,7 +17,7 @@ func getHandler(req *request.Request, args []string) error {
 	value, ok := req.State.GetStore().GetExact(args[0], store.String)
 	str, parseOk := value.(string)
 	if !ok || !parseOk {
-		res = resp.RESPNilArray
+		res = resp.RESPNilBulkString
 	} else {
 		res = resp.NewRESPString(str)
 	}

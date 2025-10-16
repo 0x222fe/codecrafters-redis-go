@@ -112,7 +112,7 @@ func xreadHandler(req *request.Request, args []string) error {
 
 	var res resp.RESPValue
 	if fetchedCount == 0 {
-		res = resp.RESPNilBulkString
+		res = resp.RESPNilArray
 	} else {
 		arr := make([]resp.RESPValue, 0)
 		for _, key := range keys {
