@@ -1,7 +1,9 @@
 package sortedset
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -149,6 +151,12 @@ func TestAdd(t *testing.T) {
 			keys:    []string{"a", "a", "b"},
 			scores:  []float64{1.0, 2.0, 3.0},
 			wantLen: 2,
+		},
+		{
+			name:    "add scores without order",
+			keys:    []string{"a", "b", "c", "d"},
+			scores:  []float64{1.0, 3.0, 2.0, 1.0},
+			wantLen: 4,
 		},
 	}
 
@@ -393,8 +401,8 @@ func TestRangeByRank(t *testing.T) {
 				s.add("e", 5.0)
 				return s
 			},
-			start:    1,
-			stop:     5,
+			start:    0,
+			stop:     4,
 			wantKeys: []string{"a", "b", "c", "d", "e"},
 		},
 		{
@@ -408,8 +416,8 @@ func TestRangeByRank(t *testing.T) {
 				s.add("e", 5.0)
 				return s
 			},
-			start:    2,
-			stop:     4,
+			start:    1,
+			stop:     3,
 			wantKeys: []string{"b", "c", "d"},
 		},
 		{
@@ -421,8 +429,8 @@ func TestRangeByRank(t *testing.T) {
 				s.add("c", 3.0)
 				return s
 			},
-			start:    0,
-			stop:     3,
+			start:    -1,
+			stop:     2,
 			wantKeys: []string{},
 		},
 		{
@@ -433,8 +441,8 @@ func TestRangeByRank(t *testing.T) {
 				s.add("b", 2.0)
 				return s
 			},
-			start:    3,
-			stop:     4,
+			start:    2,
+			stop:     3,
 			wantKeys: []string{},
 		},
 		{
@@ -442,8 +450,8 @@ func TestRangeByRank(t *testing.T) {
 			setup: func() *SortedSet {
 				return New()
 			},
-			start:    1,
-			stop:     3,
+			start:    0,
+			stop:     2,
 			wantKeys: []string{},
 		},
 	}
@@ -479,7 +487,7 @@ func TestRank(t *testing.T) {
 				return s
 			},
 			queryKey:  "c",
-			wantRank:  3,
+			wantRank:  2,
 			wantFound: true,
 		},
 		{
@@ -491,7 +499,7 @@ func TestRank(t *testing.T) {
 				return s
 			},
 			queryKey:  "a",
-			wantRank:  1,
+			wantRank:  0,
 			wantFound: true,
 		},
 		{
@@ -504,7 +512,7 @@ func TestRank(t *testing.T) {
 				return s
 			},
 			queryKey:  "d",
-			wantRank:  0,
+			wantRank:  -1,
 			wantFound: false,
 		},
 		{
@@ -513,7 +521,7 @@ func TestRank(t *testing.T) {
 				return New()
 			},
 			queryKey:  "a",
-			wantRank:  0,
+			wantRank:  -1,
 			wantFound: false,
 		},
 	}
@@ -584,5 +592,75 @@ func TestLen(t *testing.T) {
 				t.Errorf("Len() = %v, want %v", s.Len(), tt.wantLen)
 			}
 		})
+	}
+}
+
+func TestSortedSet_LexOrderOnSameScore(t *testing.T) {
+	s := New()
+	s.add("banana", 1.0)
+	s.add("apple", 1.0)
+	s.add("date", 2.0)
+	s.add("cherry", 1.0)
+	s.add("apricot", 1.0)
+
+	got := s.RangeByRank(0, 3)
+	want := []string{"apple", "apricot", "banana", "cherry"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Lex order failed: got %v, want %v", got, want)
+	}
+
+	got2 := s.RangeByRank(4, 4)
+	want2 := []string{"date"}
+	if !reflect.DeepEqual(got2, want2) {
+		t.Errorf("Score order failed: got %v, want %v", got2, want2)
+	}
+}
+
+func (ss *SortedSet) debugPrint() {
+	if ss == nil {
+		fmt.Println("SortedSet is nil")
+		return
+	}
+
+	orderedVals := []string{}
+	valToIdx := map[string]int{}
+	if ss.bottom != nil {
+		idx := 0
+		for n := ss.bottom.head; n != nil; n = n.next {
+			orderedVals = append(orderedVals, n.val)
+			valToIdx[n.val] = idx
+			idx++
+		}
+	}
+	if len(orderedVals) == 0 {
+		fmt.Println("(empty set)")
+		return
+	}
+
+	layers := [][]string{}
+	for l := ss.top; l != nil; l = l.down {
+		row := make([]string, len(orderedVals))
+		for n := l.head; n != nil; n = n.next {
+			if idx, ok := valToIdx[n.val]; ok {
+				row[idx] = fmt.Sprintf("%s(%.2f)", n.val, n.score)
+			}
+		}
+		layers = append(layers, row)
+	}
+
+	for _, row := range layers {
+		line := ""
+		empty := true
+		for _, val := range row {
+			if val != "" {
+				line += fmt.Sprintf("%-16s", val)
+				empty = false
+			} else {
+				line += "                "
+			}
+		}
+		if !empty {
+			fmt.Println(strings.TrimRight(line, " "))
+		}
 	}
 }

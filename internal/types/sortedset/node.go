@@ -33,7 +33,7 @@ func (n *node) append(val string, score float64) *node {
 	if n.next != nil {
 		n.next.prev = newNode
 	}
-	n.next = newNode
+	newNode.next = n.next
 
 	n.next = newNode
 	newNode.prev = n

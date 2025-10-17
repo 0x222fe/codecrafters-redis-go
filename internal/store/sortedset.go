@@ -16,14 +16,14 @@ type sortedSetEntry struct {
 	set *sortedset.SortedSet
 }
 
-func (store *Store) AddToSortedSet(name string, members []SortedSetMember) int {
+func (store *Store) AddToSortedSet(key string, members []SortedSetMember) int {
 	store.sortedSetMu.Lock()
-	entry, ok := store.sortedSetEntries[name]
+	entry, ok := store.sortedSetEntries[key]
 	if !ok {
 		entry = &sortedSetEntry{
 			set: sortedset.New(),
 		}
-		store.sortedSetEntries[name] = entry
+		store.sortedSetEntries[key] = entry
 	}
 
 	entry.mu.Lock()
@@ -35,4 +35,20 @@ func (store *Store) AddToSortedSet(name string, members []SortedSetMember) int {
 		count += entry.set.Set(m.Member, m.Score)
 	}
 	return count
+}
+
+func (store *Store) QuerySortedSetRank(key string, member string) (int, bool) {
+	store.sortedSetMu.Lock()
+	entry, ok := store.sortedSetEntries[key]
+	if !ok {
+		store.sortedSetMu.Unlock()
+		return -1, false
+	}
+
+	entry.mu.RLock()
+	store.sortedSetMu.Unlock()
+	defer entry.mu.RUnlock()
+
+	rank, ok := entry.set.Rank(member)
+	return rank, ok
 }

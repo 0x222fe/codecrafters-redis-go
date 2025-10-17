@@ -101,7 +101,7 @@ func (s *SortedSet) RangeByScore(min, max float64) []string {
 
 func (s *SortedSet) RangeByRank(start, stop int) []string {
 	result := make([]string, 0)
-	if start < 1 {
+	if start < 0 {
 		return result
 	}
 
@@ -116,7 +116,10 @@ func (s *SortedSet) RangeByRank(start, stop int) []string {
 
 	n := l.head
 
-	for i := 1; i < start; i++ {
+	for range start {
+		if n.next == nil {
+			return result
+		}
 		n = n.next
 	}
 
@@ -133,23 +136,23 @@ func (s *SortedSet) RangeByRank(start, stop int) []string {
 
 func (s *SortedSet) Rank(key string) (int, bool) {
 	if s == nil || s.bottom == nil {
-		return 0, false
+		return -1, false
 	}
 
 	n, ok := s.set[key]
 	if !ok {
-		return 0, false
+		return -1, false
 	}
 
 	curr := s.bottom.head
 
-	for i := 1; curr != nil; i++ {
+	for i := 0; curr != nil; i++ {
 		if curr == n {
 			return i, true
 		}
 		curr = curr.next
 	}
-	return 0, false
+	return -1, false
 }
 
 func (s *SortedSet) Len() int {
@@ -171,7 +174,17 @@ func (s *SortedSet) add(key string, score float64) {
 
 	stack := s.search(score)
 
-	if stack.IsEmpty() {
+	currNode, _ := stack.Pop()
+
+	if currNode != nil {
+		// INFO: 1.currNode is the rightmost node
+		// 2.with same score, we should preserve alphabetical order
+		for currNode != nil && currNode.score == score && currNode.val > key {
+			currNode = currNode.prev
+		}
+	}
+
+	if currNode == nil {
 		l := s.bottom
 		n := l.prepend(key, score)
 		s.set[key] = n
@@ -189,20 +202,18 @@ func (s *SortedSet) add(key string, score float64) {
 		return
 	}
 
-	prevNode, _ := stack.Pop()
-
-	n := prevNode.append(key, score)
+	n := currNode.append(key, score)
 	s.set[key] = n
 
 	for shouldLift() {
-		prevNode, _ = stack.Pop()
+		currNode, _ = stack.Pop()
 		var newN *node
 
-		if prevNode == nil {
+		if currNode == nil {
 			l := s.addLayer()
 			newN = l.prepend(key, score)
 		} else {
-			newN = prevNode.append(key, score)
+			newN = currNode.append(key, score)
 		}
 		newN.setDownNode(n)
 		n = newN
