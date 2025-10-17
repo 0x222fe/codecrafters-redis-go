@@ -17,15 +17,21 @@ func New() *SortedSet {
 	}
 }
 
-func (s *SortedSet) Set(key string, score float64) {
+func (s *SortedSet) Set(key string, score float64) int {
 	currScore, ok := s.Get(key)
+	var count int
 	if ok {
+		count = 0
 		if currScore == score {
-			return
+			return count
 		}
 		s.Remove(key)
+	} else {
+		count = 1
 	}
+
 	s.add(key, score)
+	return count
 }
 
 func (s *SortedSet) Remove(key string) {

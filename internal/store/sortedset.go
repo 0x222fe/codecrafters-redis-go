@@ -16,7 +16,7 @@ type sortedSetEntry struct {
 	set *sortedset.SortedSet
 }
 
-func (store *Store) AddToSortedSet(name string, members []SortedSetMember) {
+func (store *Store) AddToSortedSet(name string, members []SortedSetMember) int {
 	store.sortedSetMu.Lock()
 	entry, ok := store.sortedSetEntries[name]
 	if !ok {
@@ -30,7 +30,9 @@ func (store *Store) AddToSortedSet(name string, members []SortedSetMember) {
 	store.sortedSetMu.Unlock()
 	defer entry.mu.Unlock()
 
+	count := 0
 	for _, m := range members {
-		entry.set.Set(m.Member, m.Score)
+		count += entry.set.Set(m.Member, m.Score)
 	}
+	return count
 }
