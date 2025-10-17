@@ -38,17 +38,33 @@ func (store *Store) AddToSortedSet(key string, members []SortedSetMember) int {
 }
 
 func (store *Store) QuerySortedSetRank(key string, member string) (int, bool) {
-	store.sortedSetMu.Lock()
+	store.sortedSetMu.RLock()
 	entry, ok := store.sortedSetEntries[key]
 	if !ok {
-		store.sortedSetMu.Unlock()
+		store.sortedSetMu.RUnlock()
 		return -1, false
 	}
 
 	entry.mu.RLock()
-	store.sortedSetMu.Unlock()
+	store.sortedSetMu.RUnlock()
 	defer entry.mu.RUnlock()
 
 	rank, ok := entry.set.Rank(member)
 	return rank, ok
+}
+
+func (store *Store) ListSortedSetMembersByRank(key string, start, end int) []string {
+	store.sortedSetMu.RLock()
+	entry, ok := store.sortedSetEntries[key]
+	if !ok {
+		store.sortedSetMu.RUnlock()
+		return []string{}
+	}
+
+	entry.mu.RLock()
+	store.sortedSetMu.RUnlock()
+	defer entry.mu.RUnlock()
+
+	members := entry.set.RangeByRank(start, end)
+	return members
 }

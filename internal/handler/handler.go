@@ -58,6 +58,7 @@ const (
 	PUBLISH     request.CommandKey = "PUBLISH"
 	ZADD        request.CommandKey = "ZADD"
 	ZRANK       request.CommandKey = "ZRANK"
+	ZRANGE      request.CommandKey = "ZRANGE"
 )
 
 var (
@@ -90,6 +91,7 @@ var (
 		PUBLISH:     {handler: publishHandler, cmdType: cmdTypeWrite, allowedInSubMode: true},
 		ZADD:        {handler: zaddHandler, cmdType: cmdTypeWrite},
 		ZRANK:       {handler: zrankHandler, cmdType: cmdTypeRead},
+		ZRANGE:      {handler: zrangeHandler, cmdType: cmdTypeRead},
 	}
 )
 
