@@ -59,6 +59,7 @@ const (
 	ZADD        request.CommandKey = "ZADD"
 	ZRANK       request.CommandKey = "ZRANK"
 	ZRANGE      request.CommandKey = "ZRANGE"
+	ZCARD       request.CommandKey = "ZCARD"
 )
 
 var (
@@ -92,6 +93,7 @@ var (
 		ZADD:        {handler: zaddHandler, cmdType: cmdTypeWrite},
 		ZRANK:       {handler: zrankHandler, cmdType: cmdTypeRead},
 		ZRANGE:      {handler: zrangeHandler, cmdType: cmdTypeRead},
+		ZCARD:       {handler: zcardHandler, cmdType: cmdTypeRead},
 	}
 )
 

@@ -65,6 +65,20 @@ func (store *Store) ListSortedSetMembersByRank(key string, start, end int) []str
 	store.sortedSetMu.RUnlock()
 	defer entry.mu.RUnlock()
 
-	members := entry.set.RangeByRank(start, end)
-	return members
+	return entry.set.RangeByRank(start, end)
+}
+
+func (store *Store) CountSortedSetMembers(key string) int {
+	store.sortedSetMu.RLock()
+	entry, ok := store.sortedSetEntries[key]
+	if !ok {
+		store.sortedSetMu.RUnlock()
+		return 0
+	}
+
+	entry.mu.RLock()
+	store.sortedSetMu.RUnlock()
+	defer entry.mu.RUnlock()
+
+	return entry.set.Len()
 }
