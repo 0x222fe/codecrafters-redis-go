@@ -101,8 +101,17 @@ func (s *SortedSet) RangeByScore(min, max float64) []string {
 
 func (s *SortedSet) RangeByRank(start, stop int) []string {
 	result := make([]string, 0)
-	if start < 0 {
-		return result
+
+	if start < -s.Len() {
+		start = 0
+	} else if start < 0 {
+		start = s.Len() + start
+	}
+
+	if stop < -s.Len() {
+		stop = 0
+	} else if stop < 0 {
+		stop = s.Len() + stop
 	}
 
 	if s == nil || s.bottom == nil {
