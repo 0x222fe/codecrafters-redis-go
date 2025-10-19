@@ -61,6 +61,7 @@ const (
 	ZRANGE      request.CommandKey = "ZRANGE"
 	ZCARD       request.CommandKey = "ZCARD"
 	ZSCORE      request.CommandKey = "ZSCORE"
+	ZREM        request.CommandKey = "ZREM"
 )
 
 var (
@@ -96,6 +97,7 @@ var (
 		ZRANGE:      {handler: zrangeHandler, cmdType: cmdTypeRead},
 		ZCARD:       {handler: zcardHandler, cmdType: cmdTypeRead},
 		ZSCORE:      {handler: zscoreHandler, cmdType: cmdTypeRead},
+		ZREM:        {handler: zremHandler, cmdType: cmdTypeWrite},
 	}
 )
 

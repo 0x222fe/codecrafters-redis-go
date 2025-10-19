@@ -83,7 +83,7 @@ func (store *Store) CountSortedSetMembers(key string) int {
 	return entry.set.Len()
 }
 
-func (store *Store) QuerySortedSetScore(key string, member string) (float64, bool) {
+func (store *Store) QuerySortedSetScore(key, member string) (float64, bool) {
 	store.sortedSetMu.RLock()
 	entry, ok := store.sortedSetEntries[key]
 	if !ok {
@@ -96,4 +96,20 @@ func (store *Store) QuerySortedSetScore(key string, member string) (float64, boo
 	defer entry.mu.RUnlock()
 
 	return entry.set.Get(member)
+}
+
+func (store *Store) RemoveSortedSetMember(key, member string) bool {
+
+	store.sortedSetMu.RLock()
+	entry, ok := store.sortedSetEntries[key]
+	if !ok {
+		store.sortedSetMu.RUnlock()
+		return false
+	}
+
+	entry.mu.Lock()
+	store.sortedSetMu.RUnlock()
+	defer entry.mu.Unlock()
+
+	return entry.set.Remove(member)
 }

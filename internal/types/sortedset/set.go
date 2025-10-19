@@ -34,14 +34,14 @@ func (s *SortedSet) Set(key string, score float64) int {
 	return count
 }
 
-func (s *SortedSet) Remove(key string) {
+func (s *SortedSet) Remove(key string) bool {
 	if s == nil || s.top == nil {
-		return
+		return false
 	}
 
 	n, ok := s.set[key]
 	if !ok {
-		return
+		return false
 	}
 
 	delete(s.set, key)
@@ -53,6 +53,7 @@ func (s *SortedSet) Remove(key string) {
 	}
 
 	s.cleanLayers()
+	return true
 }
 
 func (s *SortedSet) Get(key string) (float64, bool) {
