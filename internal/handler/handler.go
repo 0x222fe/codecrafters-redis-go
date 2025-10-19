@@ -60,6 +60,7 @@ const (
 	ZRANK       request.CommandKey = "ZRANK"
 	ZRANGE      request.CommandKey = "ZRANGE"
 	ZCARD       request.CommandKey = "ZCARD"
+	ZSCORE      request.CommandKey = "ZSCORE"
 )
 
 var (
@@ -94,6 +95,7 @@ var (
 		ZRANK:       {handler: zrankHandler, cmdType: cmdTypeRead},
 		ZRANGE:      {handler: zrangeHandler, cmdType: cmdTypeRead},
 		ZCARD:       {handler: zcardHandler, cmdType: cmdTypeRead},
+		ZSCORE:      {handler: zscoreHandler, cmdType: cmdTypeRead},
 	}
 )
 
@@ -113,7 +115,7 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 		if !executed {
 			writeResponse(req, resp.RESPEmptyArray)
 		} else {
-			res := resp.NewRESPArray(resArr)
+			res := resp.NewArray(resArr)
 			writeResponse(req, res)
 		}
 		return nil
@@ -125,7 +127,7 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 		}
 
 		req.DiscardTransaction()
-		writeResponse(req, resp.NewRESPString("OK"))
+		writeResponse(req, resp.NewString("OK"))
 		return nil
 	}
 
@@ -153,7 +155,7 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 		txnCmds := req.Transaction.Commands
 		txnCmds = append(txnCmds, request.TxnCommand{Command: cmd, Handler: spec.handler})
 		req.Transaction.Commands = txnCmds
-		res := resp.NewRESPString("QUEUED")
+		res := resp.NewString("QUEUED")
 		writeResponse(req, res)
 		return nil
 	}

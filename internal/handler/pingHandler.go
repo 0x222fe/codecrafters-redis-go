@@ -13,5 +13,5 @@ func pingHandler(req *request.Request, args []string) error {
 	if req.SubMode {
 		return writeResponse(req, utils.BulkStringsToRESPArray([]string{"pong", ""}))
 	}
-	return writeResponse(req, resp.NewRESPString("PONG"))
+	return writeResponse(req, resp.NewString("PONG"))
 }

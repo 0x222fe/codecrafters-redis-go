@@ -16,7 +16,7 @@ func zcardHandler(req *request.Request, args []string) error {
 
 	count := req.State.GetStore().CountSortedSetMembers(key)
 
-	var res = resp.NewRESPInt(int64(count))
+	var res = resp.NewInt(int64(count))
 
 	writeResponse(req, res)
 

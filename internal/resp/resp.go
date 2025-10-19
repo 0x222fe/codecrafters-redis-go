@@ -18,28 +18,28 @@ const (
 )
 
 var (
-	RESPNilBulkString = NewRESPBulkString(nil)
-	RESPNilArray      = NewRESPArray(nil)
-	RESPEmptyArray    = NewRESPArray([]RESPValue{})
+	RESPNilBulkString = NewBulkString(nil)
+	RESPNilArray      = NewArray(nil)
+	RESPEmptyArray    = NewArray([]RESPValue{})
 )
 
-func NewRESPString(s string) RESPValue {
+func NewString(s string) RESPValue {
 	return RESPValue{valType: RESPStr, strVal: &s}
 }
 
-func NewRESPInt(i int64) RESPValue {
+func NewInt(i int64) RESPValue {
 	return RESPValue{valType: RESPInt, intVal: i}
 }
 
-func NewRESPArray(arr []RESPValue) RESPValue {
+func NewArray(arr []RESPValue) RESPValue {
 	return RESPValue{valType: RESPArr, arrVal: arr}
 }
 
-func NewRESPBulkString(s *string) RESPValue {
+func NewBulkString(s *string) RESPValue {
 	return RESPValue{valType: RESPBulkStr, strVal: s}
 }
 
-func NewRESPError(err error) RESPValue {
+func NewError(err error) RESPValue {
 	s := err.Error()
 	return RESPValue{valType: RESPErr, strVal: &s}
 }

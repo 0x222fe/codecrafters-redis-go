@@ -44,7 +44,7 @@ func rpopHandler(req *request.Request, args []string) error {
 	}
 
 	if count == 1 {
-		writeResponse(req, resp.NewRESPBulkString(&vals[0]))
+		writeResponse(req, resp.NewBulkString(&vals[0]))
 		return nil
 	}
 

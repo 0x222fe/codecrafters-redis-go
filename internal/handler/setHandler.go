@@ -47,5 +47,5 @@ func setHandler(req *request.Request, args []string) error {
 	if req.Propagated {
 		return nil
 	}
-	return writeResponse(req, resp.NewRESPString("OK"))
+	return writeResponse(req, resp.NewString("OK"))
 }

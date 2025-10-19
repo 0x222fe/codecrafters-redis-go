@@ -110,20 +110,20 @@ func handleConnection(conn net.Conn, state *state.AppState) {
 				return
 			}
 
-			conn.Write(resp.NewRESPError(err).Encode())
+			conn.Write(resp.NewError(err).Encode())
 			continue
 		}
 
 		cmd, err := request.ParseCommandFromRESP(respVal)
 		if err != nil {
-			conn.Write(resp.NewRESPError(err).Encode())
+			conn.Write(resp.NewError(err).Encode())
 			continue
 		}
 		fmt.Printf("Received command: %s\n", cmd.Name)
 
 		err = handler.RunCommand(req, cmd)
 		if err != nil {
-			conn.Write(resp.NewRESPError(err).Encode())
+			conn.Write(resp.NewError(err).Encode())
 			continue
 		}
 	}

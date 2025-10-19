@@ -80,7 +80,7 @@ func parseStr(reader *countingReader) (RESPValue, error) {
 		return RESPValue{}, err
 	}
 	s := strings.TrimSuffix(line, "\r\n")
-	return NewRESPString(s), nil
+	return NewString(s), nil
 }
 
 func parseErr(reader *countingReader) (RESPValue, error) {
@@ -96,7 +96,7 @@ func parseErr(reader *countingReader) (RESPValue, error) {
 		return RESPValue{}, err
 	}
 	s := strings.TrimSuffix(line, "\r\n")
-	return NewRESPString(s), nil
+	return NewString(s), nil
 }
 
 func parseBulkStr(reader *countingReader) (RESPValue, error) {
@@ -116,7 +116,7 @@ func parseBulkStr(reader *countingReader) (RESPValue, error) {
 		return RESPValue{}, err
 	}
 	if length == -1 {
-		return NewRESPBulkString(nil), nil
+		return NewBulkString(nil), nil
 	}
 	data := make([]byte, length)
 	if _, err := io.ReadFull(reader, data); err != nil {
@@ -128,7 +128,7 @@ func parseBulkStr(reader *countingReader) (RESPValue, error) {
 		return RESPValue{}, err
 	}
 	s := string(data)
-	return NewRESPBulkString(&s), nil
+	return NewBulkString(&s), nil
 }
 
 func parseInt(reader *countingReader) (RESPValue, error) {
@@ -148,7 +148,7 @@ func parseInt(reader *countingReader) (RESPValue, error) {
 	if err != nil {
 		return RESPValue{}, err
 	}
-	return NewRESPInt(i), nil
+	return NewInt(i), nil
 }
 
 func parseArray(reader *countingReader) (RESPValue, error) {
@@ -171,7 +171,7 @@ func parseArray(reader *countingReader) (RESPValue, error) {
 	}
 
 	if length == -1 {
-		return NewRESPArray(nil), nil
+		return NewArray(nil), nil
 	}
 
 	arr := make([]RESPValue, length)
@@ -182,5 +182,5 @@ func parseArray(reader *countingReader) (RESPValue, error) {
 		}
 		arr[i] = v
 	}
-	return NewRESPArray(arr), nil
+	return NewArray(arr), nil
 }

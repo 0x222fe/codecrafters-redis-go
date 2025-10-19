@@ -7,7 +7,7 @@ import (
 
 func multiHandler(req *request.Request, args []string) error {
 	req.StartTransaction()
-	res := resp.NewRESPString("OK")
+	res := resp.NewString("OK")
 	writeResponse(req, res)
 	return nil
 }

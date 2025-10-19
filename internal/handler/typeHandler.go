@@ -14,5 +14,5 @@ func typeHandler(req *request.Request, args []string) error {
 
 	key := args[0]
 	valType := req.State.GetStore().Type(key)
-	return writeResponse(req, resp.NewRESPString(valType))
+	return writeResponse(req, resp.NewString(valType))
 }

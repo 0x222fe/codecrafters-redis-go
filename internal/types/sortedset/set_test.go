@@ -421,19 +421,6 @@ func TestRangeByRank(t *testing.T) {
 			wantKeys: []string{"b", "c", "d"},
 		},
 		{
-			name: "invalid start",
-			setup: func() *SortedSet {
-				s := New()
-				s.add("a", 1.0)
-				s.add("b", 2.0)
-				s.add("c", 3.0)
-				return s
-			},
-			start:    -1,
-			stop:     2,
-			wantKeys: []string{},
-		},
-		{
 			name: "start beyond size",
 			setup: func() *SortedSet {
 				s := New()
@@ -452,6 +439,76 @@ func TestRangeByRank(t *testing.T) {
 			},
 			start:    0,
 			stop:     2,
+			wantKeys: []string{},
+		},
+		{
+			name: "negative start index",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 2.0)
+				s.add("c", 3.0)
+				s.add("d", 4.0)
+				s.add("e", 5.0)
+				return s
+			},
+			start:    -2,
+			stop:     4,
+			wantKeys: []string{"d", "e"},
+		},
+		{
+			name: "negative stop index",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 2.0)
+				s.add("c", 3.0)
+				s.add("d", 4.0)
+				s.add("e", 5.0)
+				return s
+			},
+			start:    0,
+			stop:     -2,
+			wantKeys: []string{"a", "b", "c", "d"},
+		},
+		{
+			name: "negative start and stop indexes",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 2.0)
+				s.add("c", 3.0)
+				s.add("d", 4.0)
+				s.add("e", 5.0)
+				return s
+			},
+			start:    -3,
+			stop:     -1,
+			wantKeys: []string{"c", "d", "e"},
+		},
+		{
+			name: "start and stop both out of bounds negative",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 2.0)
+				return s
+			},
+			start:    -10,
+			stop:     -5,
+			wantKeys: []string{"a"},
+		},
+		{
+			name: "start > stop returns empty",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 2.0)
+				s.add("c", 3.0)
+				return s
+			},
+			start:    2,
+			stop:     1,
 			wantKeys: []string{},
 		},
 	}

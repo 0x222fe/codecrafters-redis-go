@@ -35,6 +35,6 @@ func lpushHandler(req *request.Request, args []string) error {
 		s.NotifyListPush(key, item)
 	}
 
-	writeResponse(req, resp.NewRESPInt(int64(count)))
+	writeResponse(req, resp.NewInt(int64(count)))
 	return nil
 }

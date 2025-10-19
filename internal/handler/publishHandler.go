@@ -16,7 +16,7 @@ func publishHandler(req *request.Request, args []string) error {
 
 	sent := req.State.Publish(channel, []byte(message))
 
-	writeResponse(req, resp.NewRESPInt(int64(sent)))
+	writeResponse(req, resp.NewInt(int64(sent)))
 
 	return nil
 }

@@ -9,10 +9,10 @@ func BulkStringsToRESPArray(slice []string) resp.RESPValue {
 	arr := make([]resp.RESPValue, len(slice))
 
 	for i, v := range slice {
-		arr[i] = resp.NewRESPBulkString(&v)
+		arr[i] = resp.NewBulkString(&v)
 	}
 
-	return resp.NewRESPArray(arr)
+	return resp.NewArray(arr)
 }
 
 func StreamEntriesToRESPArray(entries []*store.StreamEntry) resp.RESPValue {
@@ -22,16 +22,16 @@ func StreamEntriesToRESPArray(entries []*store.StreamEntry) resp.RESPValue {
 		idStr := entry.ID.String()
 		fieldArr := make([]resp.RESPValue, 0, 2*len(entry.Fields))
 		for k, v := range entry.Fields {
-			fieldArr = append(fieldArr, resp.NewRESPBulkString(&k))
-			fieldArr = append(fieldArr, resp.NewRESPBulkString(&v))
+			fieldArr = append(fieldArr, resp.NewBulkString(&k))
+			fieldArr = append(fieldArr, resp.NewBulkString(&v))
 		}
 
 		inner := []resp.RESPValue{
-			resp.NewRESPBulkString(&idStr),
-			resp.NewRESPArray(fieldArr),
+			resp.NewBulkString(&idStr),
+			resp.NewArray(fieldArr),
 		}
-		entryArr = append(entryArr, resp.NewRESPArray(inner))
+		entryArr = append(entryArr, resp.NewArray(inner))
 	}
 
-	return resp.NewRESPArray(entryArr)
+	return resp.NewArray(entryArr)
 }

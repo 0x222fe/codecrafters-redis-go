@@ -27,7 +27,7 @@ func psyncHandler(req *request.Request, args []string) error {
 		replicationOffset = s.ReplicationOffset
 	})
 
-	psyncRes := resp.NewRESPString("FULLRESYNC " + replicationID + " " + strconv.Itoa(replicationOffset))
+	psyncRes := resp.NewString("FULLRESYNC " + replicationID + " " + strconv.Itoa(replicationOffset))
 
 	err := writeResponse(req, psyncRes)
 	if err != nil {

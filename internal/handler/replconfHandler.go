@@ -25,7 +25,7 @@ func replconfHandler(req *request.Request, args []string) error {
 	case "ACK":
 		return replconfACK(req, args[1:])
 	default:
-		return writeResponse(req, resp.NewRESPString("OK"))
+		return writeResponse(req, resp.NewString("OK"))
 	}
 }
 

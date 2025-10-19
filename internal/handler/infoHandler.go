@@ -39,7 +39,7 @@ func infoHandler(req *request.Request, args []string) error {
 			"master_repl_offset:" + strconv.Itoa(repOffset) + "\r\n"
 	}
 
-	res := resp.NewRESPBulkString(&info)
+	res := resp.NewBulkString(&info)
 
 	return writeResponse(req, res)
 }

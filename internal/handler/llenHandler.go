@@ -16,7 +16,7 @@ func llenHandler(req *request.Request, args []string) error {
 
 	v, _, ok := req.State.GetStore().Get(key)
 	if !ok {
-		writeResponse(req, resp.NewRESPInt(0))
+		writeResponse(req, resp.NewInt(0))
 		return nil
 	}
 
@@ -25,6 +25,6 @@ func llenHandler(req *request.Request, args []string) error {
 		return store.ERRWrongType
 	}
 
-	writeResponse(req, resp.NewRESPInt(int64(list.Len())))
+	writeResponse(req, resp.NewInt(int64(list.Len())))
 	return nil
 }

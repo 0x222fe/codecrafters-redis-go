@@ -21,11 +21,11 @@ func unsubscribeHandler(req *request.Request, args []string) error {
 		}
 
 		req.Client.WriteResp(
-			resp.NewRESPArray(
+			resp.NewArray(
 				[]resp.RESPValue{
-					resp.NewRESPBulkString(&unsubMsg),
-					resp.NewRESPBulkString(&channel),
-					resp.NewRESPInt(int64(chanCount)),
+					resp.NewBulkString(&unsubMsg),
+					resp.NewBulkString(&channel),
+					resp.NewInt(int64(chanCount)),
 				},
 			),
 		)

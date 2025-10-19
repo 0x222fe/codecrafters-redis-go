@@ -12,7 +12,7 @@ func echoHandler(req *request.Request, args []string) error {
 		return errors.New("ECHO requires at least one argument")
 	}
 
-	res := resp.NewRESPString(args[0])
+	res := resp.NewString(args[0])
 
 	return writeResponse(req, res)
 }

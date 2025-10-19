@@ -35,7 +35,7 @@ func waitHandler(req *request.Request, args []string) error {
 	}
 
 	if repCount == 0 {
-		return writeResponse(req, resp.NewRESPInt(0))
+		return writeResponse(req, resp.NewInt(0))
 	}
 
 	ctx, cancel := context.WithTimeout(req.Ctx, time.Duration(timeoutMillis)*time.Millisecond)
@@ -101,7 +101,7 @@ outter:
 	}
 
 	ackCount := int64(len(acked))
-	return writeResponse(req, resp.NewRESPInt(int64(ackCount)))
+	return writeResponse(req, resp.NewInt(int64(ackCount)))
 }
 
 func getRepOffsetUpdate(ctx context.Context, req *request.Request, rep *state.Replica, syncedChan chan uuid.UUID, doneChan chan uuid.UUID) {

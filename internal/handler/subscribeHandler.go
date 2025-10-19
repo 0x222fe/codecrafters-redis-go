@@ -16,11 +16,11 @@ func subscribeHandler(req *request.Request, args []string) error {
 	for _, channel := range args {
 		sub := req.State.AddSubscriber(req.Client, channel)
 		req.Client.WriteResp(
-			resp.NewRESPArray(
+			resp.NewArray(
 				[]resp.RESPValue{
-					resp.NewRESPBulkString(&subMsg),
-					resp.NewRESPBulkString(&channel),
-					resp.NewRESPInt(int64(len(sub.Channels))),
+					resp.NewBulkString(&subMsg),
+					resp.NewBulkString(&channel),
+					resp.NewInt(int64(len(sub.Channels))),
 				},
 			),
 		)

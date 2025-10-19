@@ -37,7 +37,7 @@ func zaddHandler(req *request.Request, args []string) error {
 
 	count := req.State.GetStore().AddToSortedSet(key, members)
 
-	res := resp.NewRESPInt(int64(count))
+	res := resp.NewInt(int64(count))
 
 	writeResponse(req, res)
 	return nil

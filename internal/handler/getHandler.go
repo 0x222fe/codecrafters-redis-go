@@ -19,7 +19,7 @@ func getHandler(req *request.Request, args []string) error {
 	if !ok || !parseOk {
 		res = resp.RESPNilBulkString
 	} else {
-		res = resp.NewRESPString(str)
+		res = resp.NewString(str)
 	}
 
 	return writeResponse(req, res)

@@ -41,7 +41,7 @@ func xaddHandler(req *request.Request, args []string) error {
 	}
 
 	s := entry.ID.String()
-	res := resp.NewRESPBulkString(&s)
+	res := resp.NewBulkString(&s)
 	writeResponse(req, res)
 
 	go func() {

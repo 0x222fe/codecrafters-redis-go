@@ -2,25 +2,27 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 )
 
-func zrankHandler(req *request.Request, args []string) error {
+func zscoreHandler(req *request.Request, args []string) error {
 	if len(args) != 2 {
-		return errors.New("ZRANK requires exactly 2 arguments")
+		return errors.New("ZSCORE requires exactly 2 arguments")
 	}
 
 	key, member := args[0], args[1]
 
-	rank, ok := req.State.GetStore().QuerySortedSetRank(key, member)
+	score, ok := req.State.GetStore().QuerySortedSetScore(key, member)
 
 	var res resp.RESPValue
 	if !ok {
 		res = resp.RESPNilBulkString
 	} else {
-		res = resp.NewInt(int64(rank))
+		s := fmt.Sprintf("%.17g", score)
+		res = resp.NewBulkString(&s)
 	}
 
 	writeResponse(req, res)

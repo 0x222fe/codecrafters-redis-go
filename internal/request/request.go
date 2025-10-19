@@ -45,7 +45,7 @@ func (r *Request) ExecTransaction() ([]resp.RESPValue, bool, error) {
 	for _, cmd := range r.Transaction.Commands {
 		err := cmd.Handler.Handle(r, cmd.Command)
 		if err != nil {
-			r.Transaction.WriteResp(resp.NewRESPError(err))
+			r.Transaction.WriteResp(resp.NewError(err))
 		}
 	}
 	res := r.Transaction.Responses

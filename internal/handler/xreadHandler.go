@@ -121,13 +121,13 @@ func xreadHandler(req *request.Request, args []string) error {
 				continue
 			}
 			streamArr := make([]resp.RESPValue, 0, 2*len(entries))
-			streamArr = append(streamArr, resp.NewRESPBulkString(&key))
+			streamArr = append(streamArr, resp.NewBulkString(&key))
 			streamEntryRESP := utils.StreamEntriesToRESPArray(entries)
 			streamArr = append(streamArr, streamEntryRESP)
-			arr = append(arr, resp.NewRESPArray(streamArr))
+			arr = append(arr, resp.NewArray(streamArr))
 		}
 
-		res = resp.NewRESPArray(arr)
+		res = resp.NewArray(arr)
 	}
 
 	writeResponse(req, res)
