@@ -5,11 +5,11 @@ import (
 )
 
 const (
-	minLon = -180.0
-	maxLon = 180.0
-	minLat = -85.05112878
-	maxLat = 85.05112878
-	scale  = float64((1 << 26) - 1)
+	MinLongitude = -180.0
+	MaxLongitude = 180.0
+	MinLatitude  = -85.05112878
+	MaxLatitude  = 85.05112878
+	scale        = float64((1 << 26) - 1)
 )
 
 func normalize(value, min, max float64) uint32 {
@@ -32,8 +32,8 @@ func interleaveBits(x, y uint32) uint64 {
 
 // GenerateScore encodes longitude and latitude into a Redis-style geo score.
 func GenerateScore(lo, la float64) float64 {
-	x := normalize(lo, minLon, maxLon)
-	y := normalize(la, minLat, maxLat)
+	x := normalize(lo, MinLongitude, MaxLongitude)
+	y := normalize(la, MinLatitude, MaxLatitude)
 	score := interleaveBits(x, y)
 	return float64(score)
 }
@@ -55,7 +55,7 @@ func denormalize(n uint32, min, max float64) float64 {
 func DecodeScore(score float64) (lo, la float64) {
 	z := uint64(score)
 	x, y := deinterleaveBits(z)
-	lo = denormalize(x, minLon, maxLon)
-	la = denormalize(y, minLat, maxLat)
+	lo = denormalize(x, MinLongitude, MaxLongitude)
+	la = denormalize(y, MinLatitude, MaxLatitude)
 	return
 }

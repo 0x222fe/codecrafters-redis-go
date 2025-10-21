@@ -16,8 +16,8 @@ func TestGenerateScoreAndDecodeScore(t *testing.T) {
 		la   float64
 	}{
 		{"Zero", 0, 0},
-		{"Min values", minLon, minLat},
-		{"Max values", maxLon, maxLat},
+		{"Min values", MinLongitude, MinLatitude},
+		{"Max values", MaxLongitude, MaxLatitude},
 		{"Negative values", -77.0365, -12.0432},
 		{"Positive values", 120.9842, 14.5995},
 		{"Edge case 1", -180, 85.05112878},

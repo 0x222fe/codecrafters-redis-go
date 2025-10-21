@@ -38,6 +38,11 @@ func geoaddHandler(req *request.Request, args []string) error {
 			return fmt.Errorf("GEOADD: invalid latitude: %s", err)
 		}
 
+		if longitude < geoutil.MinLongitude || longitude > geoutil.MaxLongitude ||
+			latitude < geoutil.MinLatitude || latitude > geoutil.MaxLatitude {
+			return fmt.Errorf("invalid longitude,latitude pair %f,%f", longitude, latitude)
+		}
+
 		score := geoutil.GenerateScore(longitude, latitude)
 		locations = append(locations, store.SortedSetMember{Score: score, Member: m})
 	}
