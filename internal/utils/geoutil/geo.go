@@ -18,7 +18,9 @@ func normalize(val, min, max float64) uint32 {
 }
 
 func denormalize(val uint32, min, max float64) float64 {
-	return float64(val)/scale*(max-min) + min
+	minVal := min + (max-min)*(float64(val)/scale)
+	maxVal := min + (max-min)*(float64(val+1)/scale)
+	return (maxVal + minVal) / 2
 }
 
 func interleave(val uint32) uint64 {
