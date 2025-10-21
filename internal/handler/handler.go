@@ -63,6 +63,7 @@ const (
 	ZSCORE      request.CommandKey = "ZSCORE"
 	ZREM        request.CommandKey = "ZREM"
 	GEOADD      request.CommandKey = "GEOADD"
+	GEOPOS      request.CommandKey = "GEOPOS"
 )
 
 var (
@@ -99,7 +100,8 @@ var (
 		ZCARD:       {handler: zcardHandler, cmdType: cmdTypeRead},
 		ZSCORE:      {handler: zscoreHandler, cmdType: cmdTypeRead},
 		ZREM:        {handler: zremHandler, cmdType: cmdTypeWrite},
-		GEOADD:      {handler: geoaddHandler, cmdType: cmdTypeRead},
+		GEOADD:      {handler: geoaddHandler, cmdType: cmdTypeWrite},
+		GEOPOS:      {handler: geoposHandler, cmdType: cmdTypeRead},
 	}
 )
 
