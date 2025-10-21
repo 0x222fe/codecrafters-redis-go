@@ -13,6 +13,23 @@ var (
 	scale = math.Pow(2, 26)
 )
 
+// GenerateScore encodes longitude and latitude into a Redis-style geo score.
+func GenerateScore(lo, la float64) float64 {
+	x := normalize(lo, MinLongitude, MaxLongitude)
+	y := normalize(la, MinLatitude, MaxLatitude)
+	score := (interleave(x) << 1) | interleave(y)
+
+	return float64(score)
+}
+
+// DecodeScore decodes a Redis-style geo score back to longitude and latitude.
+func DecodeScore(score float64) (lo, la float64) {
+	s := uint64(score)
+	x := denormalize(deinterleave(s>>1), MinLongitude, MaxLongitude)
+	y := denormalize(deinterleave(s), MinLatitude, MaxLatitude)
+	return float64(x), float64(y)
+}
+
 func normalize(val, min, max float64) uint32 {
 	return uint32((val - min) / (max - min) * scale)
 }
@@ -41,21 +58,4 @@ func deinterleave(v uint64) uint32 {
 	v = (v | (v >> 8)) & 0x0000FFFF0000FFFF
 	v = (v | (v >> 16)) & 0x00000000FFFFFFFF
 	return uint32(v)
-}
-
-// GenerateScore encodes longitude and latitude into a Redis-style geo score.
-func GenerateScore(lo, la float64) float64 {
-	x := normalize(lo, MinLongitude, MaxLongitude)
-	y := normalize(la, MinLatitude, MaxLatitude)
-	score := (interleave(x) << 1) | interleave(y)
-
-	return float64(score)
-}
-
-// DecodeScore decodes a Redis-style geo score back to longitude and latitude.
-func DecodeScore(score float64) (lo, la float64) {
-	s := uint64(score)
-	x := denormalize(deinterleave(s>>1), MinLongitude, MaxLongitude)
-	y := denormalize(deinterleave(s), MinLatitude, MaxLatitude)
-	return float64(x), float64(y)
 }
