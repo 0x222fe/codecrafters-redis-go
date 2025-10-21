@@ -6,7 +6,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
 func xrangeHandler(req *request.Request, args []string) error {
@@ -41,9 +41,9 @@ func xrangeHandler(req *request.Request, args []string) error {
 	var res resp.RESPValue
 	if ok {
 		entries := stream.Range(start, end)
-		res = utils.StreamEntriesToRESPArray(entries)
+		res = resputil.StreamEntriesToRESPArray(entries)
 	} else {
-		res = utils.StreamEntriesToRESPArray(nil)
+		res = resputil.StreamEntriesToRESPArray(nil)
 	}
 
 	writeResponse(req, res)

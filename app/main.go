@@ -20,7 +20,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
 func main() {
@@ -190,7 +190,7 @@ func initRepHandshake(appState *state.AppState) error {
 
 	reader := bufio.NewReader(conn)
 
-	pingCmd := utils.BulkStringsToRESPArray([]string{"PING"})
+	pingCmd := resputil.BulkStringsToRESPArray([]string{"PING"})
 	_, err = conn.Write(pingCmd.Encode())
 	if err != nil {
 		return fmt.Errorf("failed to send PING command: %w", err)
@@ -204,7 +204,7 @@ func initRepHandshake(appState *state.AppState) error {
 		return errors.New("unexpected response from master server, expected 'PONG', got: " + val)
 	}
 
-	replconfRes := utils.BulkStringsToRESPArray([]string{"REPLCONF", "listening-port", strconv.Itoa(cfg.Port)})
+	replconfRes := resputil.BulkStringsToRESPArray([]string{"REPLCONF", "listening-port", strconv.Itoa(cfg.Port)})
 	_, err = conn.Write(replconfRes.Encode())
 	if err != nil {
 		return fmt.Errorf("failed to send REPLCONF listening-port command: %w", err)
@@ -218,7 +218,7 @@ func initRepHandshake(appState *state.AppState) error {
 		return errors.New("unexpected response from master server, expected 'OK', got: " + val)
 	}
 
-	replconfRes = utils.BulkStringsToRESPArray([]string{"REPLCONF", "capa", "psync2"})
+	replconfRes = resputil.BulkStringsToRESPArray([]string{"REPLCONF", "capa", "psync2"})
 	_, err = conn.Write(replconfRes.Encode())
 	if err != nil {
 		return fmt.Errorf("failed to send REPLCONF capa command: %w", err)
@@ -232,7 +232,7 @@ func initRepHandshake(appState *state.AppState) error {
 		return errors.New("unexpected response from master server, expected 'OK', got: " + val)
 	}
 
-	psyncEncoded := utils.BulkStringsToRESPArray([]string{"PSYNC", "?", "-1"}).Encode()
+	psyncEncoded := resputil.BulkStringsToRESPArray([]string{"PSYNC", "?", "-1"}).Encode()
 	_, err = conn.Write(psyncEncoded)
 	if err != nil {
 		return fmt.Errorf("failed to send PSYNC command: %w", err)

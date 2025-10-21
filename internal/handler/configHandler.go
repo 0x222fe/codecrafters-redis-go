@@ -8,7 +8,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
 func configHandler(req *request.Request, args []string) error {
@@ -24,7 +24,7 @@ func configHandler(req *request.Request, args []string) error {
 			return err
 		}
 
-		res := utils.BulkStringsToRESPArray([]string{cfgName, val})
+		res := resputil.BulkStringsToRESPArray([]string{cfgName, val})
 		return writeResponse(req, res)
 
 	default:

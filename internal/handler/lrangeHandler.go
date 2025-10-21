@@ -7,7 +7,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
 func lrangeHandler(req *request.Request, args []string) error {
@@ -35,7 +35,7 @@ func lrangeHandler(req *request.Request, args []string) error {
 	}
 
 	values := list.GetRange(start, end)
-	res := utils.BulkStringsToRESPArray(values)
+	res := resputil.BulkStringsToRESPArray(values)
 	writeResponse(req, res)
 	return nil
 }

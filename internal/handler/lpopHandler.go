@@ -7,7 +7,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
 func lpopHandler(req *request.Request, args []string) error {
@@ -48,6 +48,6 @@ func lpopHandler(req *request.Request, args []string) error {
 		return nil
 	}
 
-	writeResponse(req, utils.BulkStringsToRESPArray(vals))
+	writeResponse(req, resputil.BulkStringsToRESPArray(vals))
 	return nil
 }

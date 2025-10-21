@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
 func zrangeHandler(req *request.Request, args []string) error {
@@ -26,7 +26,7 @@ func zrangeHandler(req *request.Request, args []string) error {
 
 	members := req.State.GetStore().ListSortedSetMembersByRank(key, start, end)
 
-	var res = utils.BulkStringsToRESPArray(members)
+	var res = resputil.BulkStringsToRESPArray(members)
 
 	writeResponse(req, res)
 	return nil

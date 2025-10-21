@@ -10,7 +10,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
 func xreadHandler(req *request.Request, args []string) error {
@@ -122,7 +122,7 @@ func xreadHandler(req *request.Request, args []string) error {
 			}
 			streamArr := make([]resp.RESPValue, 0, 2*len(entries))
 			streamArr = append(streamArr, resp.NewBulkString(&key))
-			streamEntryRESP := utils.StreamEntriesToRESPArray(entries)
+			streamEntryRESP := resputil.StreamEntriesToRESPArray(entries)
 			streamArr = append(streamArr, streamEntryRESP)
 			arr = append(arr, resp.NewArray(streamArr))
 		}

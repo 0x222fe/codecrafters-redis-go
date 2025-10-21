@@ -8,7 +8,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/client"
 	"github.com/0x222fe/codecrafters-redis-go/internal/config"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 	"github.com/google/uuid"
 )
 
@@ -115,7 +115,7 @@ func (s *AppState) AddSubscriber(c *client.Client, channel string) *Subscriber {
 			for {
 				select {
 				case msg := <-sub.MsgChan:
-					c.WriteResp(utils.BulkStringsToRESPArray([]string{
+					c.WriteResp(resputil.BulkStringsToRESPArray([]string{
 						"message",
 						msg.Channel,
 						string(msg.Payload),

@@ -10,7 +10,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 	"github.com/google/uuid"
 )
 
@@ -41,7 +41,7 @@ func waitHandler(req *request.Request, args []string) error {
 	ctx, cancel := context.WithTimeout(req.Ctx, time.Duration(timeoutMillis)*time.Millisecond)
 	defer cancel()
 
-	command := utils.BulkStringsToRESPArray([]string{"REPLCONF", "GETACK", "*"})
+	command := resputil.BulkStringsToRESPArray([]string{"REPLCONF", "GETACK", "*"})
 
 	replicas := req.State.GetReplicas()
 	acked, jobs := make(map[uuid.UUID]struct{}, len(replicas)), make(map[uuid.UUID]struct{}, len(replicas))

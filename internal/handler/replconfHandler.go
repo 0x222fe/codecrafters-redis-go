@@ -9,7 +9,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
 func replconfHandler(req *request.Request, args []string) error {
@@ -39,7 +39,7 @@ func replconfGETACK(req *request.Request, args []string) error {
 		offset = s.ReplicationOffset
 	})
 
-	command := utils.BulkStringsToRESPArray([]string{"REPLCONF", "ACK", strconv.Itoa(offset)})
+	command := resputil.BulkStringsToRESPArray([]string{"REPLCONF", "ACK", strconv.Itoa(offset)})
 	return writeResponse(req, command)
 }
 

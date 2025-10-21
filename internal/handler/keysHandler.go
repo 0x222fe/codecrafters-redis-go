@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
 func keysHandler(req *request.Request, args []string) error {
@@ -18,7 +18,7 @@ func keysHandler(req *request.Request, args []string) error {
 
 	keys := req.State.GetStore().Keys()
 
-	res := utils.BulkStringsToRESPArray(keys)
+	res := resputil.BulkStringsToRESPArray(keys)
 
 	return writeResponse(req, res)
 }

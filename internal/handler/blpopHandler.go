@@ -9,7 +9,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
 func blpopHandler(req *request.Request, args []string) error {
@@ -45,7 +45,7 @@ func blpopHandler(req *request.Request, args []string) error {
 		}
 		writeResponse(
 			req,
-			utils.BulkStringsToRESPArray([]string{key, items[0]}),
+			resputil.BulkStringsToRESPArray([]string{key, items[0]}),
 		)
 		return nil
 	}
@@ -88,7 +88,7 @@ func blpopHandler(req *request.Request, args []string) error {
 		if ok {
 			list.LPop(1)
 		}
-		writeResponse(req, utils.BulkStringsToRESPArray(data[:]))
+		writeResponse(req, resputil.BulkStringsToRESPArray(data[:]))
 		return nil
 	case <-timeoutCh:
 		writeResponse(req, resp.RESPNilArray)

@@ -1,4 +1,4 @@
-package utils
+package resputil
 
 import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"

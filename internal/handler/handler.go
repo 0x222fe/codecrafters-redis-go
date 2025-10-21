@@ -7,7 +7,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
 type commandType int
@@ -62,6 +62,7 @@ const (
 	ZCARD       request.CommandKey = "ZCARD"
 	ZSCORE      request.CommandKey = "ZSCORE"
 	ZREM        request.CommandKey = "ZREM"
+	GEOADD      request.CommandKey = "GEOADD"
 )
 
 var (
@@ -98,6 +99,7 @@ var (
 		ZCARD:       {handler: zcardHandler, cmdType: cmdTypeRead},
 		ZSCORE:      {handler: zscoreHandler, cmdType: cmdTypeRead},
 		ZREM:        {handler: zremHandler, cmdType: cmdTypeWrite},
+		GEOADD:      {handler: geoaddHandler, cmdType: cmdTypeRead},
 	}
 )
 
@@ -172,7 +174,7 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 	}
 
 	if spec.cmdType == cmdTypeWrite && !isReplica {
-		replicaCommand := utils.BulkStringsToRESPArray(append([]string{cmdName}, cmd.Args...))
+		replicaCommand := resputil.BulkStringsToRESPArray(append([]string{cmdName}, cmd.Args...))
 		encoded := replicaCommand.Encode()
 
 		req.State.WriteState(func(s *state.State) {
