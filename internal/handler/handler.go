@@ -65,6 +65,7 @@ const (
 	GEOADD      request.CommandKey = "GEOADD"
 	GEOPOS      request.CommandKey = "GEOPOS"
 	GEODIST     request.CommandKey = "GEODIST"
+	GEOSEARCH   request.CommandKey = "GEOSEARCH"
 )
 
 var (
@@ -104,6 +105,7 @@ var (
 		GEOADD:      {handler: geoaddHandler, cmdType: cmdTypeWrite},
 		GEOPOS:      {handler: geoposHandler, cmdType: cmdTypeRead},
 		GEODIST:     {handler: geodistHandler, cmdType: cmdTypeRead},
+		GEOSEARCH:   {handler: geosearchHandler, cmdType: cmdTypeRead},
 	}
 )
 

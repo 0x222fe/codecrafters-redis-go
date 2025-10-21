@@ -43,7 +43,7 @@ func geoaddHandler(req *request.Request, args []string) error {
 			return fmt.Errorf("invalid longitude,latitude pair %f,%f", longitude, latitude)
 		}
 
-		score := geoutil.GenerateScore(longitude, latitude)
+		score := geoutil.EncodeScore(longitude, latitude)
 		locations = append(locations, store.SortedSetMember{Score: score, Member: m})
 	}
 

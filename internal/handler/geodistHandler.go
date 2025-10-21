@@ -11,7 +11,7 @@ import (
 
 func geodistHandler(req *request.Request, args []string) error {
 	if len(args) != 3 {
-		return errors.New("GEOADD requires exactly 3 arguments")
+		return errors.New("GEODIST requires exactly 3 arguments")
 	}
 
 	key, a, b := args[0], args[1], args[2]

@@ -13,8 +13,8 @@ var (
 	scale = math.Pow(2, 26)
 )
 
-// GenerateScore encodes longitude and latitude into a Redis-style geo score.
-func GenerateScore(lo, la float64) float64 {
+// EncodeScore encodes longitude and latitude into a Redis-style geo score.
+func EncodeScore(lo, la float64) float64 {
 	x := normalize(lo, MinLongitude, MaxLongitude)
 	y := normalize(la, MinLatitude, MaxLatitude)
 	score := (interleave(x) << 1) | interleave(y)

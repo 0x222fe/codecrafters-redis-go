@@ -99,7 +99,6 @@ func (store *Store) QuerySortedSetScore(key, member string) (float64, bool) {
 }
 
 func (store *Store) RemoveSortedSetMember(key, member string) bool {
-
 	store.sortedSetMu.RLock()
 	entry, ok := store.sortedSetEntries[key]
 	if !ok {
@@ -112,4 +111,26 @@ func (store *Store) RemoveSortedSetMember(key, member string) bool {
 	defer entry.mu.Unlock()
 
 	return entry.set.Remove(member)
+}
+
+func (store *Store) QuerySortedSetMemberByScore(key string, min, max float64) []SortedSetMember {
+	store.sortedSetMu.RLock()
+	entry, ok := store.sortedSetEntries[key]
+	if !ok {
+		store.sortedSetMu.RUnlock()
+		return []SortedSetMember{}
+	}
+
+	entry.mu.Lock()
+	store.sortedSetMu.RUnlock()
+	defer entry.mu.Unlock()
+
+	names := entry.set.RangeByScore(min, max)
+	members := make([]SortedSetMember, 0, len(names))
+
+	for _, name := range names {
+		score, _ := entry.set.Get(name)
+		members = append(members, SortedSetMember{Score: score, Member: name})
+	}
+	return members
 }

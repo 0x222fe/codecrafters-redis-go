@@ -12,7 +12,7 @@ import (
 
 func geoposHandler(req *request.Request, args []string) error {
 	if len(args) < 2 {
-		return errors.New("GEOADD requires at least 2 arguments")
+		return errors.New("GEOPOS requires at least 2 arguments")
 	}
 
 	key, locations := args[0], args[1:]

@@ -29,7 +29,7 @@ func TestGenerateScoreMatchesRedis(t *testing.T) {
 	const epsilon = 1e-6
 
 	for _, tc := range tests {
-		score := GenerateScore(tc.lo, tc.la)
+		score := EncodeScore(tc.lo, tc.la)
 		if diff := score - tc.score; diff < -epsilon || diff > epsilon {
 			t.Errorf("%s: Score mismatch: got %.1f, want %.1f", tc.name, score, tc.score)
 		}
