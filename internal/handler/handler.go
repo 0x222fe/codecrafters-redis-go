@@ -10,10 +10,9 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
-type commandType int
 type commandSpec struct {
 	handler          commandHandler
-	cmdType          commandType
+	cmdType          request.CommandType
 	allowedInSubMode bool
 }
 type commandHandler func(req *request.Request, args []string) error
@@ -22,97 +21,52 @@ func (h commandHandler) Handle(req *request.Request, cmd request.Command) error 
 	return h(req, cmd.Args)
 }
 
-const (
-	cmdTypeRead commandType = iota
-	cmdTypeWrite
-)
-
-const (
-	PING        request.CommandKey = "PING"
-	ECHO        request.CommandKey = "ECHO"
-	SET         request.CommandKey = "SET"
-	GET         request.CommandKey = "GET"
-	CONFIG      request.CommandKey = "CONFIG"
-	KEYS        request.CommandKey = "KEYS"
-	INFO        request.CommandKey = "INFO"
-	REPLCONF    request.CommandKey = "REPLCONF"
-	PSYNC       request.CommandKey = "PSYNC"
-	WAIT        request.CommandKey = "WAIT"
-	TYPE        request.CommandKey = "TYPE"
-	XADD        request.CommandKey = "XADD"
-	XRANGE      request.CommandKey = "XRANGE"
-	XREAD       request.CommandKey = "XREAD"
-	INCR        request.CommandKey = "INCR"
-	MULTI       request.CommandKey = "MULTI"
-	EXEC        request.CommandKey = "EXEC"
-	DISCARD     request.CommandKey = "DISCARD"
-	LPUSH       request.CommandKey = "LPUSH"
-	RPUSH       request.CommandKey = "RPUSH"
-	LRANGE      request.CommandKey = "LRANGE"
-	LLEN        request.CommandKey = "LLEN"
-	LPOP        request.CommandKey = "LPOP"
-	BLPOP       request.CommandKey = "BLPOP"
-	RPOP        request.CommandKey = "RPOP"
-	SUBSCRIBE   request.CommandKey = "SUBSCRIBE"
-	UNSUBSCRIBE request.CommandKey = "UNSUBSCRIBE"
-	PUBLISH     request.CommandKey = "PUBLISH"
-	ZADD        request.CommandKey = "ZADD"
-	ZRANK       request.CommandKey = "ZRANK"
-	ZRANGE      request.CommandKey = "ZRANGE"
-	ZCARD       request.CommandKey = "ZCARD"
-	ZSCORE      request.CommandKey = "ZSCORE"
-	ZREM        request.CommandKey = "ZREM"
-	GEOADD      request.CommandKey = "GEOADD"
-	GEOPOS      request.CommandKey = "GEOPOS"
-	GEODIST     request.CommandKey = "GEODIST"
-	GEOSEARCH   request.CommandKey = "GEOSEARCH"
-)
-
 var (
 	handlerReg = map[request.CommandKey]commandSpec{
-		PING:        {handler: pingHandler, allowedInSubMode: true},
-		ECHO:        {handler: echoHandler},
-		SET:         {handler: setHandler, cmdType: cmdTypeWrite},
-		GET:         {handler: getHandler},
-		CONFIG:      {handler: configHandler},
-		KEYS:        {handler: keysHandler},
-		INFO:        {handler: infoHandler},
-		REPLCONF:    {handler: replconfHandler},
-		PSYNC:       {handler: psyncHandler},
-		WAIT:        {handler: waitHandler},
-		TYPE:        {handler: typeHandler},
-		XADD:        {handler: xaddHandler, cmdType: cmdTypeWrite},
-		XRANGE:      {handler: xrangeHandler},
-		XREAD:       {handler: xreadHandler},
-		INCR:        {handler: incrHandler, cmdType: cmdTypeWrite},
-		MULTI:       {handler: multiHandler},
-		LPUSH:       {handler: lpushHandler, cmdType: cmdTypeWrite},
-		RPUSH:       {handler: rpushHandler, cmdType: cmdTypeWrite},
-		LRANGE:      {handler: lrangeHandler},
-		LLEN:        {handler: llenHandler},
-		LPOP:        {handler: lpopHandler, cmdType: cmdTypeWrite},
-		BLPOP:       {handler: blpopHandler, cmdType: cmdTypeWrite},
-		RPOP:        {handler: rpopHandler, cmdType: cmdTypeWrite},
-		SUBSCRIBE:   {handler: subscribeHandler, allowedInSubMode: true},
-		UNSUBSCRIBE: {handler: unsubscribeHandler, allowedInSubMode: true},
-		PUBLISH:     {handler: publishHandler, cmdType: cmdTypeWrite, allowedInSubMode: true},
-		ZADD:        {handler: zaddHandler, cmdType: cmdTypeWrite},
-		ZRANK:       {handler: zrankHandler, cmdType: cmdTypeRead},
-		ZRANGE:      {handler: zrangeHandler, cmdType: cmdTypeRead},
-		ZCARD:       {handler: zcardHandler, cmdType: cmdTypeRead},
-		ZSCORE:      {handler: zscoreHandler, cmdType: cmdTypeRead},
-		ZREM:        {handler: zremHandler, cmdType: cmdTypeWrite},
-		GEOADD:      {handler: geoaddHandler, cmdType: cmdTypeWrite},
-		GEOPOS:      {handler: geoposHandler, cmdType: cmdTypeRead},
-		GEODIST:     {handler: geodistHandler, cmdType: cmdTypeRead},
-		GEOSEARCH:   {handler: geosearchHandler, cmdType: cmdTypeRead},
+		request.PING:        {handler: pingHandler, allowedInSubMode: true},
+		request.ECHO:        {handler: echoHandler},
+		request.SET:         {handler: setHandler, cmdType: request.CmdTypeWrite},
+		request.GET:         {handler: getHandler},
+		request.CONFIG:      {handler: configHandler},
+		request.KEYS:        {handler: keysHandler},
+		request.INFO:        {handler: infoHandler},
+		request.REPLCONF:    {handler: replconfHandler},
+		request.PSYNC:       {handler: psyncHandler},
+		request.WAIT:        {handler: waitHandler},
+		request.TYPE:        {handler: typeHandler},
+		request.XADD:        {handler: xaddHandler, cmdType: request.CmdTypeWrite},
+		request.XRANGE:      {handler: xrangeHandler},
+		request.XREAD:       {handler: xreadHandler},
+		request.INCR:        {handler: incrHandler, cmdType: request.CmdTypeWrite},
+		request.MULTI:       {handler: multiHandler},
+		request.LPUSH:       {handler: lpushHandler, cmdType: request.CmdTypeWrite},
+		request.RPUSH:       {handler: rpushHandler, cmdType: request.CmdTypeWrite},
+		request.LRANGE:      {handler: lrangeHandler},
+		request.LLEN:        {handler: llenHandler},
+		request.LPOP:        {handler: lpopHandler, cmdType: request.CmdTypeWrite},
+		request.BLPOP:       {handler: blpopHandler, cmdType: request.CmdTypeWrite},
+		request.RPOP:        {handler: rpopHandler, cmdType: request.CmdTypeWrite},
+		request.SUBSCRIBE:   {handler: subscribeHandler, allowedInSubMode: true},
+		request.UNSUBSCRIBE: {handler: unsubscribeHandler, allowedInSubMode: true},
+		request.PUBLISH:     {handler: publishHandler, cmdType: request.CmdTypeWrite, allowedInSubMode: true},
+		request.ZADD:        {handler: zaddHandler, cmdType: request.CmdTypeWrite},
+		request.ZRANK:       {handler: zrankHandler, cmdType: request.CmdTypeRead},
+		request.ZRANGE:      {handler: zrangeHandler, cmdType: request.CmdTypeRead},
+		request.ZCARD:       {handler: zcardHandler, cmdType: request.CmdTypeRead},
+		request.ZSCORE:      {handler: zscoreHandler, cmdType: request.CmdTypeRead},
+		request.ZREM:        {handler: zremHandler, cmdType: request.CmdTypeWrite},
+		request.GEOADD:      {handler: geoaddHandler, cmdType: request.CmdTypeWrite},
+		request.GEOPOS:      {handler: geoposHandler, cmdType: request.CmdTypeRead},
+		request.GEODIST:     {handler: geodistHandler, cmdType: request.CmdTypeRead},
+		request.GEOSEARCH:   {handler: geosearchHandler, cmdType: request.CmdTypeRead},
+		request.ACL:         {handler: aclHandler, cmdType: request.CmdTypeRead},
 	}
 )
 
 func RunCommand(req *request.Request, cmd request.Command) error {
 	cmdName := string(cmd.Name)
 
-	if cmd.Name == EXEC {
+	if cmd.Name == request.EXEC {
 		if !req.IsInTxn() {
 			return errors.New("EXEC without MULTI")
 		}
@@ -131,7 +85,7 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 		return nil
 	}
 
-	if cmd.Name == DISCARD {
+	if cmd.Name == request.DISCARD {
 		if !req.IsInTxn() {
 			return errors.New("DISCARD without MULTI")
 		}
@@ -151,14 +105,14 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 		isReplica = s.IsReplica
 	})
 
-	if spec.cmdType == cmdTypeWrite &&
+	if spec.cmdType == request.CmdTypeWrite &&
 		isReplica &&
 		!req.Propagated {
 		return errors.New("replica cannot execute write commands")
 	}
 
 	if req.IsInTxn() {
-		if cmd.Name == MULTI {
+		if cmd.Name == request.MULTI {
 			return errors.New("MULTI calls can not be nested")
 		}
 
@@ -179,7 +133,7 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 		return err
 	}
 
-	if spec.cmdType == cmdTypeWrite && !isReplica {
+	if spec.cmdType == request.CmdTypeWrite && !isReplica {
 		replicaCommand := resputil.BulkStringsToRESPArray(append([]string{cmdName}, cmd.Args...))
 		encoded := replicaCommand.Encode()
 

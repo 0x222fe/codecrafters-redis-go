@@ -48,7 +48,7 @@ type AppState struct {
 }
 
 func NewAppState(s *State, cfg *config.Config, store *store.Store) *AppState {
-	return &AppState{
+	appState := &AppState{
 		cfg:         cfg,
 		store:       store,
 		state:       s,
@@ -56,6 +56,8 @@ func NewAppState(s *State, cfg *config.Config, store *store.Store) *AppState {
 		subscribers: make(map[uuid.UUID]*Subscriber),
 		channelSubs: make(map[string]map[uuid.UUID]*Subscriber),
 	}
+
+	return appState
 }
 
 type State struct {
@@ -63,6 +65,7 @@ type State struct {
 	MasterReplicationID string
 	ReplicationID       string
 	ReplicationOffset   int
+	User                string
 }
 
 func (s *AppState) ReadState(f func(s State)) {

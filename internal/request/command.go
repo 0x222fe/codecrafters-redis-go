@@ -9,10 +9,58 @@ import (
 )
 
 type CommandKey string
+type CommandType int
 type Command struct {
 	Name CommandKey
 	Args []string
 }
+
+const (
+	CmdTypeRead CommandType = iota
+	CmdTypeWrite
+)
+
+const (
+	PING        CommandKey = "PING"
+	ECHO        CommandKey = "ECHO"
+	SET         CommandKey = "SET"
+	GET         CommandKey = "GET"
+	CONFIG      CommandKey = "CONFIG"
+	KEYS        CommandKey = "KEYS"
+	INFO        CommandKey = "INFO"
+	REPLCONF    CommandKey = "REPLCONF"
+	PSYNC       CommandKey = "PSYNC"
+	WAIT        CommandKey = "WAIT"
+	TYPE        CommandKey = "TYPE"
+	XADD        CommandKey = "XADD"
+	XRANGE      CommandKey = "XRANGE"
+	XREAD       CommandKey = "XREAD"
+	INCR        CommandKey = "INCR"
+	MULTI       CommandKey = "MULTI"
+	EXEC        CommandKey = "EXEC"
+	DISCARD     CommandKey = "DISCARD"
+	LPUSH       CommandKey = "LPUSH"
+	RPUSH       CommandKey = "RPUSH"
+	LRANGE      CommandKey = "LRANGE"
+	LLEN        CommandKey = "LLEN"
+	LPOP        CommandKey = "LPOP"
+	BLPOP       CommandKey = "BLPOP"
+	RPOP        CommandKey = "RPOP"
+	SUBSCRIBE   CommandKey = "SUBSCRIBE"
+	UNSUBSCRIBE CommandKey = "UNSUBSCRIBE"
+	PUBLISH     CommandKey = "PUBLISH"
+	ZADD        CommandKey = "ZADD"
+	ZRANK       CommandKey = "ZRANK"
+	ZRANGE      CommandKey = "ZRANGE"
+	ZCARD       CommandKey = "ZCARD"
+	ZSCORE      CommandKey = "ZSCORE"
+	ZREM        CommandKey = "ZREM"
+	GEOADD      CommandKey = "GEOADD"
+	GEOPOS      CommandKey = "GEOPOS"
+	GEODIST     CommandKey = "GEODIST"
+	GEOSEARCH   CommandKey = "GEOSEARCH"
+	ACL         CommandKey = "ACL"
+)
 
 func ParseCommandFromRESP(v resp.RESPValue) (Command, error) {
 	arr, ok := v.GetArrayValue()
