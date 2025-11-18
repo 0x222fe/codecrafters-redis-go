@@ -49,7 +49,7 @@ type AppState struct {
 }
 
 func NewAppState(s *State, cfg *config.Config, store *store.Store) *AppState {
-	defaultUser := NewUser("default")
+	defaultUser := NewUser("default", []UserFlag{FlagNoPass})
 	s.User = defaultUser
 
 	appState := &AppState{

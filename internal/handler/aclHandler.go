@@ -52,7 +52,7 @@ func aclGetUser(req *request.Request, args []string) error {
 		return errors.New("ACL GETUSER: no such user")
 	}
 
-	flags, fName := resputil.BulkStringsToRESPArray(user.Flags), "flags"
+	flags, fName := resputil.BulkStringsToRESPArray(user.GetFlags()), "flags"
 	result := resp.NewArray([]resp.RESPValue{resp.NewBulkString(&fName), flags})
 	writeResponse(req, result)
 	return nil
