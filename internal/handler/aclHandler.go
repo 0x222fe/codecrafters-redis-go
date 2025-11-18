@@ -7,7 +7,6 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
 func aclHandler(req *request.Request, args []string) error {
@@ -52,8 +51,26 @@ func aclGetUser(req *request.Request, args []string) error {
 		return errors.New("ACL GETUSER: no such user")
 	}
 
-	flags, fName := resputil.BulkStringsToRESPArray(user.GetFlags()), "flags"
-	result := resp.NewArray([]resp.RESPValue{resp.NewBulkString(&fName), flags})
-	writeResponse(req, result)
-	return nil
+	arr := make([]resp.RESPValue, 0)
+	nf := "flags"
+	arr = append(arr, resp.NewBulkString(&nf))
+
+	flags := make([]resp.RESPValue, 0, len(user.Flags))
+	for flag := range user.Flags {
+		n := string(flag)
+		flags = append(flags, resp.NewBulkString(&n))
+	}
+	arr = append(arr, resp.NewArray(flags))
+
+	np := "passwords"
+	arr = append(arr, resp.NewBulkString(&np))
+
+	passwords := make([]resp.RESPValue, 0, len(user.Passwords))
+	for password := range user.Passwords {
+		passwords = append(passwords, resp.NewBulkString(&password))
+	}
+	arr = append(arr, resp.NewArray(passwords))
+
+	result := resp.NewArray(arr)
+	return writeResponse(req, result)
 }

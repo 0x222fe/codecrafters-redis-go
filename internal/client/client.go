@@ -25,9 +25,6 @@ func NewClient(c net.Conn) *Client {
 }
 
 func (r *Client) WriteResp(resp resp.RESPValue) error {
-	r.mu.Lock()
-	r.mu.Unlock()
-
 	_, err := r.Write(resp.Encode())
 	return err
 }

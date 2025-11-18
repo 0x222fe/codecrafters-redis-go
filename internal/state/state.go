@@ -49,8 +49,7 @@ type AppState struct {
 }
 
 func NewAppState(s *State, cfg *config.Config, store *store.Store) *AppState {
-	defaultUser := NewUser("default", []UserFlag{FlagNoPass})
-	s.User = defaultUser
+	s.User = DefaulUser
 
 	appState := &AppState{
 		cfg:         cfg,
@@ -60,7 +59,7 @@ func NewAppState(s *State, cfg *config.Config, store *store.Store) *AppState {
 		subscribers: make(map[uuid.UUID]*Subscriber),
 		channelSubs: make(map[string]map[uuid.UUID]*Subscriber),
 		users: map[string]*User{
-			"default": defaultUser,
+			"default": DefaulUser,
 		},
 	}
 
