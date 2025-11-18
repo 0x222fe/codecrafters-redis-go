@@ -44,10 +44,14 @@ type AppState struct {
 	replicas    map[uuid.UUID]*Replica
 	subscribers map[uuid.UUID]*Subscriber
 	channelSubs map[string]map[uuid.UUID]*Subscriber
+	users       map[string]*User
 	state       *State
 }
 
 func NewAppState(s *State, cfg *config.Config, store *store.Store) *AppState {
+	defaultUser := NewUser("default")
+	s.User = defaultUser
+
 	appState := &AppState{
 		cfg:         cfg,
 		store:       store,
@@ -55,6 +59,9 @@ func NewAppState(s *State, cfg *config.Config, store *store.Store) *AppState {
 		replicas:    make(map[uuid.UUID]*Replica),
 		subscribers: make(map[uuid.UUID]*Subscriber),
 		channelSubs: make(map[string]map[uuid.UUID]*Subscriber),
+		users: map[string]*User{
+			"default": defaultUser,
+		},
 	}
 
 	return appState
@@ -65,7 +72,7 @@ type State struct {
 	MasterReplicationID string
 	ReplicationID       string
 	ReplicationOffset   int
-	User                string
+	User                *User
 }
 
 func (s *AppState) ReadState(f func(s State)) {
@@ -251,4 +258,12 @@ func (s *AppState) GetReplicas() []*Replica {
 		reps = append(reps, r)
 	}
 	return reps
+}
+
+func (s *AppState) GetUser(name string) (*User, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	user, exists := s.users[name]
+	return user, exists
 }
