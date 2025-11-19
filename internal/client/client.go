@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
+	"github.com/0x222fe/codecrafters-redis-go/internal/user"
 	"github.com/google/uuid"
 )
 
@@ -14,6 +15,7 @@ type Client struct {
 	mu     sync.Mutex
 	conn   net.Conn
 	writer *bufio.Writer
+	user   *user.User
 }
 
 func NewClient(c net.Conn) *Client {
@@ -21,7 +23,16 @@ func NewClient(c net.Conn) *Client {
 		ID:     uuid.New(),
 		conn:   c,
 		writer: bufio.NewWriter(c),
+		user:   user.DefaulUser,
 	}
+}
+
+func (r *Client) User() *user.User {
+	return r.user
+}
+
+func (r *Client) SetUser(user *user.User) {
+	r.user = user
 }
 
 func (r *Client) WriteResp(resp resp.RESPValue) error {

@@ -8,6 +8,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/client"
 	"github.com/0x222fe/codecrafters-redis-go/internal/config"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
+	"github.com/0x222fe/codecrafters-redis-go/internal/user"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 	"github.com/google/uuid"
 )
@@ -44,13 +45,11 @@ type AppState struct {
 	replicas    map[uuid.UUID]*Replica
 	subscribers map[uuid.UUID]*Subscriber
 	channelSubs map[string]map[uuid.UUID]*Subscriber
-	users       map[string]*User
+	users       map[string]*user.User
 	state       *State
 }
 
 func NewAppState(s *State, cfg *config.Config, store *store.Store) *AppState {
-	s.User = DefaulUser
-
 	appState := &AppState{
 		cfg:         cfg,
 		store:       store,
@@ -58,8 +57,8 @@ func NewAppState(s *State, cfg *config.Config, store *store.Store) *AppState {
 		replicas:    make(map[uuid.UUID]*Replica),
 		subscribers: make(map[uuid.UUID]*Subscriber),
 		channelSubs: make(map[string]map[uuid.UUID]*Subscriber),
-		users: map[string]*User{
-			"default": DefaulUser,
+		users: map[string]*user.User{
+			"default": user.DefaulUser,
 		},
 	}
 
@@ -71,7 +70,6 @@ type State struct {
 	MasterReplicationID string
 	ReplicationID       string
 	ReplicationOffset   int
-	User                *User
 }
 
 func (s *AppState) ReadState(f func(s State)) {
@@ -259,7 +257,7 @@ func (s *AppState) GetReplicas() []*Replica {
 	return reps
 }
 
-func (s *AppState) GetUser(name string) (*User, bool) {
+func (s *AppState) GetUser(name string) (*user.User, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -267,9 +265,9 @@ func (s *AppState) GetUser(name string) (*User, bool) {
 	return user, exists
 }
 
-func (s *AppState) AddUser(user *User) {
+func (s *AppState) AddUser(user *user.User) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.users[user.name] = user
+	s.users[user.Name()] = user
 }

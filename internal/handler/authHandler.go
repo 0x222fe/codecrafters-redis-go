@@ -5,7 +5,6 @@ import (
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
-	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
 var (
@@ -19,18 +18,16 @@ func authHandler(req *request.Request, args []string) error {
 
 	username, password := args[0], args[1]
 
-	user, ok := req.State.GetUser(username)
+	u, ok := req.State.GetUser(username)
 	if !ok {
 		return wrongPasswordErr
 	}
 
-	if !user.ValidatePassword(password) {
+	if !u.ValidatePassword(password) {
 		return wrongPasswordErr
 	}
 
-	req.State.WriteState(func(s *state.State) {
-		s.User = user
-	})
+	req.Client.SetUser(u)
 
 	return writeResponse(req, resp.NewString("OK"))
 }

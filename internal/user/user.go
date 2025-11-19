@@ -1,4 +1,4 @@
-package state
+package user
 
 import (
 	"crypto/sha256"
@@ -31,7 +31,7 @@ type User struct {
 	disabled  bool
 }
 
-func NewUser(name string) *User {
+func New(name string) *User {
 	return &User{
 		mu:        sync.RWMutex{},
 		name:      name,
@@ -41,13 +41,13 @@ func NewUser(name string) *User {
 	}
 }
 
-func (u *User) GetName() string {
+func (u *User) Name() string {
 	u.mu.RLock()
 	defer u.mu.RUnlock()
 	return u.name
 }
 
-func (u *User) GetFlags() []string {
+func (u *User) Flags() []string {
 	u.mu.RLock()
 	defer u.mu.RUnlock()
 
@@ -58,7 +58,7 @@ func (u *User) GetFlags() []string {
 	return flags
 }
 
-func (u *User) GetPasswords() []string {
+func (u *User) Passwords() []string {
 	u.mu.RLock()
 	defer u.mu.RUnlock()
 
