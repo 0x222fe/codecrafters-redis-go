@@ -1,6 +1,9 @@
 package resp
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func (r RESPValue) Encode() []byte {
 	switch r.valType {
@@ -8,7 +11,13 @@ func (r RESPValue) Encode() []byte {
 		//INFO: strVal should never be nil for respStr and respErr
 		return fmt.Appendf(nil, "+%s\r\n", *r.strVal)
 	case RESPErr:
-		return fmt.Appendf(nil, "-ERR %s\r\n", *r.strVal)
+		errType := strings.Split(*r.strVal, " ")[0]
+		switch errType {
+		case "WRONGPASS", "NOAUTH":
+			return fmt.Appendf(nil, "-%s\r\n", *r.strVal)
+		default:
+			return fmt.Appendf(nil, "-ERR %s\r\n", *r.strVal)
+		}
 	case RESPBulkStr:
 		if r.strVal != nil {
 			return fmt.Appendf(nil, "$%d\r\n%s\r\n", len(*r.strVal), *r.strVal)

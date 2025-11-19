@@ -60,6 +60,7 @@ var (
 		request.GEODIST:     {handler: geodistHandler, cmdType: request.CmdTypeRead},
 		request.GEOSEARCH:   {handler: geosearchHandler, cmdType: request.CmdTypeRead},
 		request.ACL:         {handler: aclHandler, cmdType: request.CmdTypeRead},
+		request.AUTH:        {handler: authHandler, cmdType: request.CmdTypeRead},
 	}
 )
 

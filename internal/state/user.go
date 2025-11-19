@@ -19,6 +19,7 @@ var (
 			FlagNoPass: true,
 		},
 		passwords: map[string]any{},
+		disabled:  false,
 	}
 )
 
@@ -27,6 +28,7 @@ type User struct {
 	name      string
 	flags     map[UserFlag]any
 	passwords map[string]any
+	disabled  bool
 }
 
 func NewUser(name string) *User {
@@ -35,6 +37,7 @@ func NewUser(name string) *User {
 		name:      name,
 		flags:     map[UserFlag]any{},
 		passwords: map[string]any{},
+		disabled:  false,
 	}
 }
 
@@ -76,4 +79,22 @@ func (u *User) AddPassword(password string) string {
 	u.passwords[hashHex] = true
 	delete(u.flags, FlagNoPass)
 	return hashHex
+}
+
+func (u *User) ValidatePassword(password string) bool {
+	u.mu.RLock()
+	defer u.mu.RUnlock()
+
+	if u.disabled {
+		return false
+	}
+
+	if _, ok := u.flags[FlagNoPass]; ok {
+		return true
+	}
+
+	hash := sha256.Sum256([]byte(password))
+	hashHex := hex.EncodeToString(hash[:])
+	_, ok := u.passwords[hashHex]
+	return ok
 }

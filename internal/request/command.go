@@ -60,6 +60,7 @@ const (
 	GEODIST     CommandKey = "GEODIST"
 	GEOSEARCH   CommandKey = "GEOSEARCH"
 	ACL         CommandKey = "ACL"
+	AUTH        CommandKey = "AUTH"
 )
 
 func ParseCommandFromRESP(v resp.RESPValue) (Command, error) {
