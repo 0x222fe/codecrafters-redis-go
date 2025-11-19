@@ -266,3 +266,10 @@ func (s *AppState) GetUser(name string) (*User, bool) {
 	user, exists := s.users[name]
 	return user, exists
 }
+
+func (s *AppState) AddUser(user *User) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.users[user.name] = user
+}

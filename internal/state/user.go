@@ -1,5 +1,11 @@
 package state
 
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"sync"
+)
+
 type UserFlag string
 
 const (
@@ -8,50 +14,66 @@ const (
 
 var (
 	DefaulUser = &User{
-		Name: "default",
-		Flags: map[UserFlag]any{
+		name: "default",
+		flags: map[UserFlag]any{
 			FlagNoPass: true,
 		},
-		Passwords: map[string]any{},
+		passwords: map[string]any{},
 	}
 )
 
 type User struct {
-	Name      string
-	Flags     map[UserFlag]any
-	Passwords map[string]any
+	mu        sync.RWMutex
+	name      string
+	flags     map[UserFlag]any
+	passwords map[string]any
 }
 
-func (u *User) GetInfo() map[string][]string {
-	flags := make([]string, 0, len(u.Flags))
-	for flag := range u.Flags {
+func NewUser(name string) *User {
+	return &User{
+		mu:        sync.RWMutex{},
+		name:      name,
+		flags:     map[UserFlag]any{},
+		passwords: map[string]any{},
+	}
+}
+
+func (u *User) GetName() string {
+	u.mu.RLock()
+	defer u.mu.RUnlock()
+	return u.name
+}
+
+func (u *User) GetFlags() []string {
+	u.mu.RLock()
+	defer u.mu.RUnlock()
+
+	flags := make([]string, 0, len(u.flags))
+	for flag := range u.flags {
 		flags = append(flags, string(flag))
 	}
-
-	passwords := make([]string, 0, len(u.Passwords))
-	for password := range u.Passwords {
-		passwords = append(passwords, password)
-	}
-
-	return map[string][]string{
-		"flags":     flags,
-		"passwords": passwords,
-	}
-
+	return flags
 }
 
-// func (u *User) GetFlags() []string {
-// 	flags := make([]string, 0, len(u.Flags))
-// 	for flag := range u.Flags {
-// 		flags = append(flags, string(flag))
-// 	}
-// 	return flags
-// }
-//
-// func (u *User) GetPasswords() []string {
-// 	passwords := make([]string, 0, len(u.Passwords))
-// 	for password := range u.Passwords {
-// 		passwords = append(passwords, password)
-// 	}
-// 	return passwords
-// }
+func (u *User) GetPasswords() []string {
+	u.mu.RLock()
+	defer u.mu.RUnlock()
+
+	passwords := make([]string, 0, len(u.passwords))
+	for password := range u.passwords {
+		passwords = append(passwords, password)
+	}
+	return passwords
+}
+
+func (u *User) AddPassword(password string) string {
+	hash := sha256.Sum256([]byte(password))
+	hashHex := hex.EncodeToString(hash[:])
+
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	u.passwords[hashHex] = true
+	delete(u.flags, FlagNoPass)
+	return hashHex
+}
