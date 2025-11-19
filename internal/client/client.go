@@ -18,12 +18,12 @@ type Client struct {
 	user   *user.User
 }
 
-func NewClient(c net.Conn) *Client {
+func NewClient(c net.Conn, u *user.User) *Client {
 	return &Client{
 		ID:     uuid.New(),
 		conn:   c,
 		writer: bufio.NewWriter(c),
-		user:   user.DefaulUser,
+		user:   u,
 	}
 }
 

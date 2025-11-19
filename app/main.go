@@ -20,6 +20,7 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
+	"github.com/0x222fe/codecrafters-redis-go/internal/user"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
@@ -91,16 +92,22 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 	return state, nil
 }
 
-func handleConnection(conn net.Conn, state *state.AppState) {
+func handleConnection(conn net.Conn, s *state.AppState) {
 	defer conn.Close()
-	client := client.NewClient(conn)
+
+	defaultUser, ok := s.GetUser(user.DefaultUserName)
+	if !ok || !defaultUser.ValidatePassword("") {
+		defaultUser = nil
+	}
+	client := client.NewClient(conn, defaultUser)
+
 	defer func() {
-		state.RemoveReplica(client.ID)
+		s.RemoveReplica(client.ID)
 	}()
 
 	reader := bufio.NewReader(conn)
 
-	req := request.NewRequest(context.Background(), client, state)
+	req := request.NewRequest(context.Background(), client, s)
 
 	for {
 		respVal, _, err := resp.DecodeRESPInputExact(reader, resp.RESPArr)
@@ -135,7 +142,8 @@ func serveMaster(appState *state.AppState, conn net.Conn, reader *bufio.Reader) 
 		fmt.Println("Master connection closed")
 	}()
 
-	client := client.NewClient(conn)
+	defaultUser, _ := appState.GetUser(user.DefaultUserName)
+	client := client.NewClient(conn, defaultUser)
 
 	req := request.NewRequest(context.Background(), client, appState)
 	req.Propagated = true

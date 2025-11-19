@@ -10,6 +10,10 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
+var (
+	noAuthErr = errors.New("NOAUTH Authentication required.")
+)
+
 func aclHandler(req *request.Request, args []string) error {
 	if len(args) < 1 {
 		return errors.New("ACL requires at least 1 argument")
@@ -35,9 +39,13 @@ func aclWhoAmI(req *request.Request, args []string) error {
 	}
 
 	u := req.Client.User()
+	if u == nil {
+		return noAuthErr
+	}
+
 	name := u.Name()
-	command := resp.NewBulkString(&name)
-	return writeResponse(req, command)
+	res := resp.NewBulkString(&name)
+	return writeResponse(req, res)
 }
 
 func aclGetUser(req *request.Request, args []string) error {

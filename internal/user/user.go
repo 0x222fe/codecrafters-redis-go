@@ -12,15 +12,8 @@ const (
 	FlagNoPass UserFlag = "nopass"
 )
 
-var (
-	DefaulUser = &User{
-		name: "default",
-		flags: map[UserFlag]any{
-			FlagNoPass: true,
-		},
-		passwords: map[string]any{},
-		disabled:  false,
-	}
+const (
+	DefaultUserName = "default"
 )
 
 type User struct {
@@ -56,6 +49,13 @@ func (u *User) Flags() []string {
 		flags = append(flags, string(flag))
 	}
 	return flags
+}
+
+func (u *User) AddFlag(flag UserFlag) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	u.flags[flag] = true
 }
 
 func (u *User) Passwords() []string {
