@@ -32,6 +32,7 @@ func (c *Client) StartTransaction() {
 func (c *Client) ExecTransaction(s *state.AppState) ([]resp.RESPValue, error) {
 	defer func() {
 		c.Transaction = nil
+		s.GetStore().Unwatch(c.Conn.ID)
 	}()
 
 	c.Transaction.Executing = true
@@ -54,7 +55,8 @@ func (c *Client) ExecTransaction(s *state.AppState) ([]resp.RESPValue, error) {
 	return res, nil
 }
 
-func (c *Client) DiscardTransaction() {
+func (c *Client) DiscardTransaction(s *state.AppState) {
+	s.GetStore().Unwatch(c.Conn.ID)
 	c.Transaction = nil
 }
 

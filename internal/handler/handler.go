@@ -90,7 +90,7 @@ func RunCommand(c *client.Client, s *state.AppState, cmd command.Command) error 
 			return errors.New("DISCARD without MULTI")
 		}
 
-		c.DiscardTransaction()
+		c.DiscardTransaction(s)
 		writeResponse(c, resp.NewString("OK"))
 		return nil
 	}
