@@ -82,10 +82,13 @@ func (s *SortedSet) RangeByScore(min, max float64) []string {
 	}
 
 	if n.score < min {
-		return result
+		n = n.next
+		if n == nil {
+			return result
+		}
 	}
 
-	// INFO: n is the rightmost node in the bottom layer with score >= min,
+	// INFO: n is the rightmost node in the bottom layer with score <= min,
 	// so we need to move left to find the leftmost node with the same score
 	// to ensure all nodes with that score are included.
 	for n.prev != nil && n.prev.score == n.score {

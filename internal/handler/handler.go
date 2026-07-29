@@ -75,17 +75,13 @@ func RunCommand(c *client.Client, s *state.AppState, cmd command.Command) error 
 			return errors.New("EXEC without MULTI")
 		}
 
-		resArr, executed, err := c.ExecTransaction(s)
+		resArr, err := c.ExecTransaction(s)
 		if err != nil {
 			return fmt.Errorf("failed to execute transaction: %w", err)
 		}
 
-		if !executed {
-			writeResponse(c, resp.RESPEmptyArray)
-		} else {
-			res := resp.NewArray(resArr)
-			writeResponse(c, res)
-		}
+		res := resp.NewArray(resArr)
+		writeResponse(c, res)
 		return nil
 	}
 

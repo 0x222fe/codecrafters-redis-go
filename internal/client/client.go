@@ -29,7 +29,7 @@ func (c *Client) StartTransaction() {
 	c.Transaction = NewTransaction()
 }
 
-func (c *Client) ExecTransaction(s *state.AppState) ([]resp.RESPValue, bool, error) {
+func (c *Client) ExecTransaction(s *state.AppState) ([]resp.RESPValue, error) {
 	defer func() {
 		c.Transaction = nil
 	}()
@@ -37,11 +37,11 @@ func (c *Client) ExecTransaction(s *state.AppState) ([]resp.RESPValue, bool, err
 	c.Transaction.Executing = true
 
 	if len(c.Transaction.Commands) == 0 {
-		return []resp.RESPValue{}, false, nil
+		return []resp.RESPValue{}, nil
 	}
 
 	if !s.GetStore().WatchesValid(c.Conn.ID) {
-		return nil, false, nil
+		return nil, nil
 	}
 
 	for _, cmd := range c.Transaction.Commands {
@@ -51,7 +51,7 @@ func (c *Client) ExecTransaction(s *state.AppState) ([]resp.RESPValue, bool, err
 		}
 	}
 	res := c.Transaction.Responses
-	return res, true, nil
+	return res, nil
 }
 
 func (c *Client) DiscardTransaction() {

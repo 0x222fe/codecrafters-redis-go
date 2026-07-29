@@ -369,6 +369,165 @@ func TestRangeByScore(t *testing.T) {
 			max:      3.0,
 			wantKeys: []string{},
 		},
+		{
+			name: "min between scores",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 2.0)
+				s.add("c", 3.0)
+				s.add("d", 4.0)
+				s.add("e", 5.0)
+				return s
+			},
+			min:      1.5,
+			max:      4.5,
+			wantKeys: []string{"b", "c", "d"},
+		},
+		{
+			name: "max between scores",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 2.0)
+				s.add("c", 3.0)
+				s.add("d", 4.0)
+				s.add("e", 5.0)
+				return s
+			},
+			min:      1.0,
+			max:      3.5,
+			wantKeys: []string{"a", "b", "c"},
+		},
+		{
+			name: "min and max both between scores",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 2.0)
+				s.add("c", 3.0)
+				s.add("d", 4.0)
+				s.add("e", 5.0)
+				return s
+			},
+			min:      1.5,
+			max:      3.5,
+			wantKeys: []string{"b", "c"},
+		},
+		{
+			name: "min below all, max between scores",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 2.0)
+				s.add("b", 3.0)
+				s.add("c", 4.0)
+				s.add("d", 5.0)
+				return s
+			},
+			min:      0.0,
+			max:      3.5,
+			wantKeys: []string{"a", "b"},
+		},
+		{
+			name: "single element exact match",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 5.0)
+				return s
+			},
+			min:      5.0,
+			max:      5.0,
+			wantKeys: []string{"a"},
+		},
+		{
+			name: "single element no match",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 5.0)
+				return s
+			},
+			min:      6.0,
+			max:      6.0,
+			wantKeys: []string{},
+		},
+		{
+			name: "max below lowest score",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 10.0)
+				s.add("b", 20.0)
+				return s
+			},
+			min:      1.0,
+			max:      5.0,
+			wantKeys: []string{},
+		},
+		{
+			name: "single match at upper boundary",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 2.0)
+				s.add("c", 3.0)
+				return s
+			},
+			min:      3.0,
+			max:      3.0,
+			wantKeys: []string{"c"},
+		},
+		{
+			name: "negative scores",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", -5.0)
+				s.add("b", 0.0)
+				s.add("c", 5.0)
+				return s
+			},
+			min:      -3.0,
+			max:      3.0,
+			wantKeys: []string{"b"},
+		},
+		{
+			name: "min equals max between two scores",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 3.0)
+				return s
+			},
+			min:      2.0,
+			max:      2.0,
+			wantKeys: []string{},
+		},
+		{
+			name: "after removing head then range by score",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 2.0)
+				s.add("c", 3.0)
+				s.Remove("a")
+				return s
+			},
+			min:      1.0,
+			max:      3.0,
+			wantKeys: []string{"b", "c"},
+		},
+		{
+			name: "after removing middle then range by score",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 2.0)
+				s.add("c", 3.0)
+				s.Remove("b")
+				return s
+			},
+			min:      1.0,
+			max:      3.0,
+			wantKeys: []string{"a", "c"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -511,6 +670,57 @@ func TestRangeByRank(t *testing.T) {
 			stop:     1,
 			wantKeys: []string{},
 		},
+		{
+			name: "single element",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				return s
+			},
+			start:    0,
+			stop:     0,
+			wantKeys: []string{"a"},
+		},
+		{
+			name: "after removing head then range",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 2.0)
+				s.add("c", 3.0)
+				s.Remove("a")
+				return s
+			},
+			start:    0,
+			stop:     1,
+			wantKeys: []string{"b", "c"},
+		},
+		{
+			name: "after removing middle then range",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 2.0)
+				s.add("c", 3.0)
+				s.Remove("b")
+				return s
+			},
+			start:    0,
+			stop:     1,
+			wantKeys: []string{"a", "c"},
+		},
+		{
+			name: "after removing all elements",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.Remove("a")
+				return s
+			},
+			start:    0,
+			stop:     0,
+			wantKeys: []string{},
+		},
 	}
 
 	for _, tt := range tests {
@@ -580,6 +790,34 @@ func TestRank(t *testing.T) {
 			queryKey:  "a",
 			wantRank:  -1,
 			wantFound: false,
+		},
+		{
+			name: "after score update rank shifts",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 2.0)
+				s.add("c", 3.0)
+				s.Set("a", 5.0)
+				return s
+			},
+			queryKey:  "a",
+			wantRank:  2,
+			wantFound: true,
+		},
+		{
+			name: "after removing lower scored element",
+			setup: func() *SortedSet {
+				s := New()
+				s.add("a", 1.0)
+				s.add("b", 2.0)
+				s.add("c", 3.0)
+				s.Remove("a")
+				return s
+			},
+			queryKey:  "c",
+			wantRank:  1,
+			wantFound: true,
 		},
 	}
 
