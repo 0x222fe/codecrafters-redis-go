@@ -1,67 +1,71 @@
 package client
 
 import (
-	"bufio"
-	"net"
-	"sync"
+	"context"
 
+	"github.com/0x222fe/codecrafters-redis-go/internal/connection"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
-	"github.com/0x222fe/codecrafters-redis-go/internal/user"
-	"github.com/google/uuid"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
 type Client struct {
-	ID     uuid.UUID
-	mu     sync.Mutex
-	conn   net.Conn
-	writer *bufio.Writer
-	user   *user.User
+	Ctx         context.Context
+	Conn        *connection.Connection
+	Transaction *Transaction
+	Propagated  bool
+	SubMode     bool
 }
 
-func NewClient(c net.Conn, u *user.User) *Client {
+func NewClient(ctx context.Context, conn *connection.Connection) *Client {
 	return &Client{
-		ID:     uuid.New(),
-		conn:   c,
-		writer: bufio.NewWriter(c),
-		user:   u,
+		Ctx:         ctx,
+		Conn:        conn,
+		Transaction: nil,
+		Propagated:  false,
 	}
 }
 
-func (r *Client) User() *user.User {
-	return r.user
+func (c *Client) StartTransaction() {
+	c.Transaction = NewTransaction()
 }
 
-func (r *Client) SetUser(user *user.User) {
-	r.user = user
-}
+func (c *Client) ExecTransaction(s *state.AppState) ([]resp.RESPValue, bool, error) {
+	defer func() {
+		c.Transaction = nil
+	}()
 
-func (r *Client) WriteResp(resp resp.RESPValue) error {
-	_, err := r.Write(resp.Encode())
-	return err
-}
+	c.Transaction.Executing = true
 
-func (r *Client) Write(p []byte) (int, error) {
-	r.mu.Lock()
-	writer := r.writer
-	r.mu.Unlock()
-
-	n, err := writer.Write(p)
-	if err != nil {
-		return n, err
+	if len(c.Transaction.Commands) == 0 {
+		return []resp.RESPValue{}, false, nil
 	}
-	return n, writer.Flush()
+
+	if !s.GetStore().WatchesValid(c.Conn.ID) {
+		return nil, false, nil
+	}
+
+	for _, cmd := range c.Transaction.Commands {
+		err := cmd.Handler.Handle(c, s, cmd.Command)
+		if err != nil {
+			c.Transaction.WriteResp(resp.NewError(err))
+		}
+	}
+	res := c.Transaction.Responses
+	return res, true, nil
 }
 
-func (r *Client) Close() error {
-	r.mu.Lock()
-	conn := r.conn
-	r.mu.Unlock()
-	return conn.Close()
+func (c *Client) DiscardTransaction() {
+	c.Transaction = nil
 }
 
-func (r *Client) RemoteAddr() net.Addr {
-	r.mu.Lock()
-	conn := r.conn
-	r.mu.Unlock()
-	return conn.RemoteAddr()
+func (c *Client) IsInTxn() bool {
+	return c.Transaction != nil
+}
+
+func (c *Client) GetWriter() connection.RespWriter {
+	if c.Transaction != nil && c.Transaction.Executing {
+		return c.Transaction
+	}
+
+	return c.Conn
 }

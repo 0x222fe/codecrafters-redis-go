@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/geoutil"
 )
 
-func geoaddHandler(req *request.Request, args []string) error {
+func geoaddHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) < 4 {
 		return errors.New("GEOADD requires at least 4 arguments")
 	}
@@ -47,10 +48,10 @@ func geoaddHandler(req *request.Request, args []string) error {
 		locations = append(locations, store.SortedSetMember{Score: score, Member: m})
 	}
 
-	count := req.State.GetStore().AddToSortedSet(key, locations)
+	count := s.GetStore().AddToSortedSet(key, locations)
 
 	res := resp.NewInt(int64(count))
 
-	writeResponse(req, res)
+	writeResponse(c, res)
 	return nil
 }

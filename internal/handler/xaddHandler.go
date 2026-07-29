@@ -3,12 +3,13 @@ package handler
 import (
 	"fmt"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 )
 
-func xaddHandler(req *request.Request, args []string) error {
+func xaddHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) < 4 || len(args)%2 != 0 {
 		return fmt.Errorf("XADD requires at least 4 arguments and an even number of additional arguments")
 	}
@@ -19,16 +20,16 @@ func xaddHandler(req *request.Request, args []string) error {
 	}
 
 	var stream *store.RedisStream
-	v, t, ok := req.State.GetStore().Get(key)
+	v, t, ok := s.GetStore().Get(key)
 	if !ok {
 		stream = store.NewStream(key)
-		req.State.GetStore().Set(key, stream, store.Stream, nil)
+		s.GetStore().Set(key, stream, store.Stream, nil)
 	} else {
-		s, parseOk := v.(*store.RedisStream)
+		var parseOk bool
+		stream, parseOk = v.(*store.RedisStream)
 		if t != store.Stream || !parseOk {
 			return fmt.Errorf("key is not a stream")
 		}
-		stream = s
 	}
 
 	fields := make(map[string]string)
@@ -40,12 +41,12 @@ func xaddHandler(req *request.Request, args []string) error {
 		return err
 	}
 
-	s := entry.ID.String()
-	res := resp.NewBulkString(&s)
-	writeResponse(req, res)
+	entryID := entry.ID.String()
+	res := resp.NewBulkString(&entryID)
+	writeResponse(c, res)
 
 	go func() {
-		store := req.State.GetStore()
+		store := s.GetStore()
 		store.IterateStreamInsertHandlers(key, entry)
 	}()
 

@@ -3,13 +3,14 @@ package handler
 import (
 	"errors"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
-func xrangeHandler(req *request.Request, args []string) error {
+func xrangeHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) != 3 {
 		return errors.New("XRANGE requires 3 arguments")
 	}
@@ -32,7 +33,7 @@ func xrangeHandler(req *request.Request, args []string) error {
 		end = e.RadixKey()
 	}
 
-	v, ok := req.State.GetStore().GetExact(key, store.Stream)
+	v, ok := s.GetStore().GetExact(key, store.Stream)
 	stream, parseOk := v.(*store.RedisStream)
 	if !ok || !parseOk {
 		return errors.New("key is not a stream")
@@ -46,6 +47,6 @@ func xrangeHandler(req *request.Request, args []string) error {
 		res = resputil.StreamEntriesToRESPArray(nil)
 	}
 
-	writeResponse(req, res)
+	writeResponse(c, res)
 	return nil
 }

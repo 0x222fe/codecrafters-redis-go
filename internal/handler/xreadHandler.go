@@ -7,13 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
-func xreadHandler(req *request.Request, args []string) error {
+func xreadHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) < 3 {
 		return errors.New("XREAD requires at least 3 arguments")
 	}
@@ -37,7 +38,7 @@ func xreadHandler(req *request.Request, args []string) error {
 	keys, idStrs := args[1:1+count], args[1+count:]
 	streams := make([]*store.RedisStream, 0, count)
 	for _, key := range keys {
-		v, _, has := req.State.GetStore().Get(key)
+		v, _, has := s.GetStore().Get(key)
 		stream, parseOk := v.(*store.RedisStream)
 		if has && !parseOk {
 			return store.ERRWrongType
@@ -83,7 +84,7 @@ func xreadHandler(req *request.Request, args []string) error {
 
 		defer func() {
 			for _, key := range keys {
-				req.State.GetStore().UnregisterStreamInsertHandler(key, req.Client.ID)
+				s.GetStore().UnregisterStreamInsertHandler(key, c.Conn.ID)
 			}
 		}()
 
@@ -97,7 +98,7 @@ func xreadHandler(req *request.Request, args []string) error {
 
 		for _, key := range keys {
 			localKey := key
-			req.State.GetStore().RegisterStreamInsertHandler(key, req.Client.ID, func(entry *store.StreamEntry) {
+			s.GetStore().RegisterStreamInsertHandler(key, c.Conn.ID, func(entry *store.StreamEntry) {
 				doneCh <- streamEntry{streamKey: localKey, entry: entry}
 			})
 		}
@@ -130,6 +131,6 @@ func xreadHandler(req *request.Request, args []string) error {
 		res = resp.NewArray(arr)
 	}
 
-	writeResponse(req, res)
+	writeResponse(c, res)
 	return nil
 }

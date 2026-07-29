@@ -4,11 +4,12 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
-func zrangeHandler(req *request.Request, args []string) error {
+func zrangeHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) != 3 {
 		return errors.New("ZRANGE requires exactly 3 arguments")
 	}
@@ -24,10 +25,10 @@ func zrangeHandler(req *request.Request, args []string) error {
 		return errors.New("ZRANGE end argument must be an integer")
 	}
 
-	members := req.State.GetStore().ListSortedSetMembersByRank(key, start, end)
+	members := s.GetStore().ListSortedSetMembersByRank(key, start, end)
 
 	var res = resputil.BulkStringsToRESPArray(members)
 
-	writeResponse(req, res)
+	writeResponse(c, res)
 	return nil
 }

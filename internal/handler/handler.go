@@ -4,7 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/command"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
@@ -12,87 +13,89 @@ import (
 
 type commandSpec struct {
 	handler          commandHandler
-	cmdType          request.CommandType
+	cmdType          command.CommandType
 	allowedInSubMode bool
 }
-type commandHandler func(req *request.Request, args []string) error
+type commandHandler func(c *client.Client, s *state.AppState, args []string) error
 
-func (h commandHandler) Handle(req *request.Request, cmd request.Command) error {
-	return h(req, cmd.Args)
+func (h commandHandler) Handle(c *client.Client, s *state.AppState, cmd command.Command) error {
+	return h(c, s, cmd.Args)
 }
 
 var (
-	handlerReg = map[request.CommandKey]commandSpec{
-		request.PING:        {handler: pingHandler, allowedInSubMode: true},
-		request.ECHO:        {handler: echoHandler},
-		request.SET:         {handler: setHandler, cmdType: request.CmdTypeWrite},
-		request.GET:         {handler: getHandler},
-		request.CONFIG:      {handler: configHandler},
-		request.KEYS:        {handler: keysHandler},
-		request.INFO:        {handler: infoHandler},
-		request.REPLCONF:    {handler: replconfHandler},
-		request.PSYNC:       {handler: psyncHandler},
-		request.WAIT:        {handler: waitHandler},
-		request.TYPE:        {handler: typeHandler},
-		request.XADD:        {handler: xaddHandler, cmdType: request.CmdTypeWrite},
-		request.XRANGE:      {handler: xrangeHandler},
-		request.XREAD:       {handler: xreadHandler},
-		request.INCR:        {handler: incrHandler, cmdType: request.CmdTypeWrite},
-		request.MULTI:       {handler: multiHandler},
-		request.LPUSH:       {handler: lpushHandler, cmdType: request.CmdTypeWrite},
-		request.RPUSH:       {handler: rpushHandler, cmdType: request.CmdTypeWrite},
-		request.LRANGE:      {handler: lrangeHandler},
-		request.LLEN:        {handler: llenHandler},
-		request.LPOP:        {handler: lpopHandler, cmdType: request.CmdTypeWrite},
-		request.BLPOP:       {handler: blpopHandler, cmdType: request.CmdTypeWrite},
-		request.RPOP:        {handler: rpopHandler, cmdType: request.CmdTypeWrite},
-		request.SUBSCRIBE:   {handler: subscribeHandler, allowedInSubMode: true},
-		request.UNSUBSCRIBE: {handler: unsubscribeHandler, allowedInSubMode: true},
-		request.PUBLISH:     {handler: publishHandler, cmdType: request.CmdTypeWrite, allowedInSubMode: true},
-		request.ZADD:        {handler: zaddHandler, cmdType: request.CmdTypeWrite},
-		request.ZRANK:       {handler: zrankHandler, cmdType: request.CmdTypeRead},
-		request.ZRANGE:      {handler: zrangeHandler, cmdType: request.CmdTypeRead},
-		request.ZCARD:       {handler: zcardHandler, cmdType: request.CmdTypeRead},
-		request.ZSCORE:      {handler: zscoreHandler, cmdType: request.CmdTypeRead},
-		request.ZREM:        {handler: zremHandler, cmdType: request.CmdTypeWrite},
-		request.GEOADD:      {handler: geoaddHandler, cmdType: request.CmdTypeWrite},
-		request.GEOPOS:      {handler: geoposHandler, cmdType: request.CmdTypeRead},
-		request.GEODIST:     {handler: geodistHandler, cmdType: request.CmdTypeRead},
-		request.GEOSEARCH:   {handler: geosearchHandler, cmdType: request.CmdTypeRead},
-		request.ACL:         {handler: aclHandler, cmdType: request.CmdTypeRead},
-		request.AUTH:        {handler: authHandler, cmdType: request.CmdTypeRead},
+	handlerReg = map[command.CommandKey]commandSpec{
+		command.PING:        {handler: pingHandler, allowedInSubMode: true},
+		command.ECHO:        {handler: echoHandler},
+		command.SET:         {handler: setHandler, cmdType: command.TypeWrite},
+		command.GET:         {handler: getHandler},
+		command.CONFIG:      {handler: configHandler},
+		command.KEYS:        {handler: keysHandler},
+		command.INFO:        {handler: infoHandler},
+		command.REPLCONF:    {handler: replconfHandler},
+		command.PSYNC:       {handler: psyncHandler},
+		command.WAIT:        {handler: waitHandler},
+		command.TYPE:        {handler: typeHandler},
+		command.XADD:        {handler: xaddHandler, cmdType: command.TypeWrite},
+		command.XRANGE:      {handler: xrangeHandler},
+		command.XREAD:       {handler: xreadHandler},
+		command.INCR:        {handler: incrHandler, cmdType: command.TypeWrite},
+		command.MULTI:       {handler: multiHandler},
+		command.LPUSH:       {handler: lpushHandler, cmdType: command.TypeWrite},
+		command.RPUSH:       {handler: rpushHandler, cmdType: command.TypeWrite},
+		command.LRANGE:      {handler: lrangeHandler},
+		command.LLEN:        {handler: llenHandler},
+		command.LPOP:        {handler: lpopHandler, cmdType: command.TypeWrite},
+		command.BLPOP:       {handler: blpopHandler, cmdType: command.TypeWrite},
+		command.RPOP:        {handler: rpopHandler, cmdType: command.TypeWrite},
+		command.SUBSCRIBE:   {handler: subscribeHandler, allowedInSubMode: true},
+		command.UNSUBSCRIBE: {handler: unsubscribeHandler, allowedInSubMode: true},
+		command.PUBLISH:     {handler: publishHandler, cmdType: command.TypeWrite, allowedInSubMode: true},
+		command.ZADD:        {handler: zaddHandler, cmdType: command.TypeWrite},
+		command.ZRANK:       {handler: zrankHandler, cmdType: command.TypeRead},
+		command.ZRANGE:      {handler: zrangeHandler, cmdType: command.TypeRead},
+		command.ZCARD:       {handler: zcardHandler, cmdType: command.TypeRead},
+		command.ZSCORE:      {handler: zscoreHandler, cmdType: command.TypeRead},
+		command.ZREM:        {handler: zremHandler, cmdType: command.TypeWrite},
+		command.GEOADD:      {handler: geoaddHandler, cmdType: command.TypeWrite},
+		command.GEOPOS:      {handler: geoposHandler, cmdType: command.TypeRead},
+		command.GEODIST:     {handler: geodistHandler, cmdType: command.TypeRead},
+		command.GEOSEARCH:   {handler: geosearchHandler, cmdType: command.TypeRead},
+		command.ACL:         {handler: aclHandler, cmdType: command.TypeRead},
+		command.AUTH:        {handler: authHandler, cmdType: command.TypeRead},
+		command.WATCH:       {handler: watchHandler, cmdType: command.TypeRead},
+		command.UNWATCH:     {handler: unwatchHandler, cmdType: command.TypeRead},
 	}
 )
 
-func RunCommand(req *request.Request, cmd request.Command) error {
+func RunCommand(c *client.Client, s *state.AppState, cmd command.Command) error {
 	cmdName := string(cmd.Name)
 
-	if cmd.Name == request.EXEC {
-		if !req.IsInTxn() {
+	if cmd.Name == command.EXEC {
+		if !c.IsInTxn() {
 			return errors.New("EXEC without MULTI")
 		}
 
-		resArr, executed, err := req.ExecTransaction()
+		resArr, executed, err := c.ExecTransaction(s)
 		if err != nil {
 			return fmt.Errorf("failed to execute transaction: %w", err)
 		}
 
 		if !executed {
-			writeResponse(req, resp.RESPEmptyArray)
+			writeResponse(c, resp.RESPEmptyArray)
 		} else {
 			res := resp.NewArray(resArr)
-			writeResponse(req, res)
+			writeResponse(c, res)
 		}
 		return nil
 	}
 
-	if cmd.Name == request.DISCARD {
-		if !req.IsInTxn() {
+	if cmd.Name == command.DISCARD {
+		if !c.IsInTxn() {
 			return errors.New("DISCARD without MULTI")
 		}
 
-		req.DiscardTransaction()
-		writeResponse(req, resp.NewString("OK"))
+		c.DiscardTransaction()
+		writeResponse(c, resp.NewString("OK"))
 		return nil
 	}
 
@@ -102,51 +105,55 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 	}
 
 	var isReplica bool
-	req.State.ReadState(func(s state.State) {
-		isReplica = s.IsReplica
+	s.ReadState(func(st state.State) {
+		isReplica = st.IsReplica
 	})
 
-	if spec.cmdType == request.CmdTypeWrite &&
+	if spec.cmdType == command.TypeWrite &&
 		isReplica &&
-		!req.Propagated {
+		!c.Propagated {
 		return errors.New("replica cannot execute write commands")
 	}
 
-	if req.IsInTxn() {
-		if cmd.Name == request.MULTI {
+	if c.IsInTxn() {
+		if cmd.Name == command.MULTI {
 			return errors.New("MULTI calls can not be nested")
 		}
 
-		txnCmds := req.Transaction.Commands
-		txnCmds = append(txnCmds, request.TxnCommand{Command: cmd, Handler: spec.handler})
-		req.Transaction.Commands = txnCmds
+		if cmd.Name == command.WATCH || cmd.Name == command.UNWATCH {
+			return fmt.Errorf("%s inside MULTI is not allowed", cmd.Name)
+		}
+
+		txnCmds := c.Transaction.Commands
+		txnCmds = append(txnCmds, client.TxnCommand{Command: cmd, Handler: spec.handler})
+		c.Transaction.Commands = txnCmds
 		res := resp.NewString("QUEUED")
-		writeResponse(req, res)
+		writeResponse(c, res)
 		return nil
 	}
 
-	if req.SubMode && !spec.allowedInSubMode {
+	if c.SubMode && !spec.allowedInSubMode {
 		return fmt.Errorf("Can't execute '%s': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context", cmdName)
 	}
 
-	err := spec.handler(req, cmd.Args)
+	err := spec.handler(c, s, cmd.Args)
 	if err != nil {
 		return err
 	}
 
-	if spec.cmdType == request.CmdTypeWrite && !isReplica {
+	if spec.cmdType == command.TypeWrite && !isReplica {
 		replicaCommand := resputil.BulkStringsToRESPArray(append([]string{cmdName}, cmd.Args...))
 		encoded := replicaCommand.Encode()
 
-		req.State.WriteState(func(s *state.State) {
-			s.ReplicationOffset += len(encoded)
+		s.WriteState(func(st *state.State) {
+			st.ReplicationOffset += len(encoded)
 		})
 
-		replicas := req.State.GetReplicas()
+		replicas := s.GetReplicas()
 
 		for _, rep := range replicas {
-			if _, err := rep.Client.Write(encoded); err != nil {
-				fmt.Printf("failed to propagate command to replica %s: %v\n", rep.Client.RemoteAddr(), err)
+			if _, err := rep.Conn.Write(encoded); err != nil {
+				fmt.Printf("failed to propagate command to replica %s: %v\n", rep.Conn.RemoteAddr(), err)
 			}
 		}
 	}
@@ -154,12 +161,12 @@ func RunCommand(req *request.Request, cmd request.Command) error {
 	return nil
 }
 
-func writeResponse(r *request.Request, res resp.RESPValue) error {
-	writer := r.GetWriter()
+func writeResponse(c *client.Client, res resp.RESPValue) error {
+	writer := c.GetWriter()
 	err := writer.WriteResp(res)
 	if err != nil {
 		return fmt.Errorf("failed to write response: %w", err)
 	}
-	fmt.Printf("Response sent to %s\n", r.Client.RemoteAddr())
+	fmt.Printf("Response sent to %s\n", c.Conn.RemoteAddr())
 	return nil
 }

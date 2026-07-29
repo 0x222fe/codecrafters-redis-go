@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
-func replconfHandler(req *request.Request, args []string) error {
+func replconfHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) == 0 {
 		return errors.New("REPLCONF requires at least one argument")
 	}
@@ -21,29 +21,29 @@ func replconfHandler(req *request.Request, args []string) error {
 
 	switch subcommand {
 	case "GETACK":
-		return replconfGETACK(req, args[1:])
+		return replconfGETACK(c, s, args[1:])
 	case "ACK":
-		return replconfACK(req, args[1:])
+		return replconfACK(c, s, args[1:])
 	default:
-		return writeResponse(req, resp.NewString("OK"))
+		return writeResponse(c, resp.NewString("OK"))
 	}
 }
 
-func replconfGETACK(req *request.Request, args []string) error {
+func replconfGETACK(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) != 1 {
 		return errors.New("REPLCONF GETACK requires exactly one argument")
 	}
 
 	offset := 0
-	req.State.ReadState(func(s state.State) {
-		offset = s.ReplicationOffset
+	s.ReadState(func(st state.State) {
+		offset = st.ReplicationOffset
 	})
 
 	command := resputil.BulkStringsToRESPArray([]string{"REPLCONF", "ACK", strconv.Itoa(offset)})
-	return writeResponse(req, command)
+	return writeResponse(c, command)
 }
 
-func replconfACK(req *request.Request, args []string) error {
+func replconfACK(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) != 1 {
 		return errors.New("REPLCONF ACK requires exactly one argument")
 	}
@@ -52,14 +52,14 @@ func replconfACK(req *request.Request, args []string) error {
 		return fmt.Errorf("invalid offset: %s", args[0])
 	}
 
-	replica, ok := req.State.GetReplica(req.Client.ID)
+	replica, ok := s.GetReplica(c.Conn.ID)
 	if !ok {
-		return fmt.Errorf("client is not a replica, %s", req.Client.RemoteAddr().String())
+		return fmt.Errorf("client is not a replica, %s", c.Conn.RemoteAddr().String())
 	}
 
 	replica.Offset = offset
 
-	fmt.Printf("Replica %s acknowledged offset %d\n", req.Client.ID, offset)
+	fmt.Printf("Replica %s acknowledged offset %d\n", c.Conn.ID, offset)
 
 	for {
 		select {

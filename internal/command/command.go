@@ -1,4 +1,4 @@
-package request
+package command
 
 import (
 	"errors"
@@ -16,8 +16,8 @@ type Command struct {
 }
 
 const (
-	CmdTypeRead CommandType = iota
-	CmdTypeWrite
+	TypeRead CommandType = iota
+	TypeWrite
 )
 
 const (
@@ -61,6 +61,8 @@ const (
 	GEOSEARCH   CommandKey = "GEOSEARCH"
 	ACL         CommandKey = "ACL"
 	AUTH        CommandKey = "AUTH"
+	WATCH       CommandKey = "WATCH"
+	UNWATCH     CommandKey = "UNWATCH"
 )
 
 func ParseCommandFromRESP(v resp.RESPValue) (Command, error) {

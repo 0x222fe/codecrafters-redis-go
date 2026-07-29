@@ -3,18 +3,19 @@ package handler
 import (
 	"errors"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 )
 
-func getHandler(req *request.Request, args []string) error {
+func getHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) != 1 {
 		return errors.New("Usage: GET <key>")
 	}
 
 	var res resp.RESPValue
-	value, ok := req.State.GetStore().GetExact(args[0], store.String)
+	value, ok := s.GetStore().GetExact(args[0], store.String)
 	str, parseOk := value.(string)
 	if !ok || !parseOk {
 		res = resp.RESPNilBulkString
@@ -22,5 +23,5 @@ func getHandler(req *request.Request, args []string) error {
 		res = resp.NewBulkString(&str)
 	}
 
-	return writeResponse(req, res)
+	return writeResponse(c, res)
 }

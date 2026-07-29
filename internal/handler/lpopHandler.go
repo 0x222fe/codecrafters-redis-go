@@ -4,13 +4,14 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
-func lpopHandler(req *request.Request, args []string) error {
+func lpopHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) < 1 || len(args) > 2 {
 		return errors.New("LPOP takes 1 or 2 arguments")
 	}
@@ -27,9 +28,9 @@ func lpopHandler(req *request.Request, args []string) error {
 		count = c
 	}
 
-	v, _, ok := req.State.GetStore().Get(key)
+	v, _, ok := s.GetStore().Get(key)
 	if !ok {
-		writeResponse(req, resp.RESPNilBulkString)
+		writeResponse(c, resp.RESPNilBulkString)
 		return nil
 	}
 	list, ok := v.(*store.RedisList)
@@ -39,15 +40,15 @@ func lpopHandler(req *request.Request, args []string) error {
 
 	vals, ok := list.LPop(count)
 	if !ok {
-		writeResponse(req, resp.RESPNilBulkString)
+		writeResponse(c, resp.RESPNilBulkString)
 		return nil
 	}
 
 	if count == 1 {
-		writeResponse(req, resp.NewBulkString(&vals[0]))
+		writeResponse(c, resp.NewBulkString(&vals[0]))
 		return nil
 	}
 
-	writeResponse(req, resputil.BulkStringsToRESPArray(vals))
+	writeResponse(c, resputil.BulkStringsToRESPArray(vals))
 	return nil
 }

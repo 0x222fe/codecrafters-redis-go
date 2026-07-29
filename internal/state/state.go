@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/client"
 	"github.com/0x222fe/codecrafters-redis-go/internal/config"
+	"github.com/0x222fe/codecrafters-redis-go/internal/connection"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 	"github.com/0x222fe/codecrafters-redis-go/internal/user"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
@@ -18,7 +18,7 @@ const (
 )
 
 type Replica struct {
-	Client     *client.Client
+	Conn       *connection.Connection
 	Offset     int
 	OffsetChan chan int
 	Ctx        context.Context
@@ -26,7 +26,7 @@ type Replica struct {
 }
 
 type Subscriber struct {
-	Client   *client.Client
+	Conn     *connection.Connection
 	Channels map[string]struct{}
 	MsgChan  chan PubSubMsg
 	Ctx      context.Context
@@ -106,26 +106,26 @@ func (s *AppState) ReadCfg() config.Config {
 	return *s.cfg
 }
 
-func (s *AppState) AddSubscriber(c *client.Client, channel string) *Subscriber {
+func (s *AppState) AddSubscriber(conn *connection.Connection, channel string) *Subscriber {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	sub, ok := s.subscribers[c.ID]
+	sub, ok := s.subscribers[conn.ID]
 	if !ok {
 		ctx, cancel := context.WithCancel(context.Background())
 		sub = &Subscriber{
-			Client:   c,
+			Conn:     conn,
 			Ctx:      ctx,
 			Channels: make(map[string]struct{}),
 			Cancel:   cancel,
 			MsgChan:  make(chan PubSubMsg, subChanBufSize),
 		}
-		s.subscribers[c.ID] = sub
+		s.subscribers[conn.ID] = sub
 		go func() {
 			for {
 				select {
 				case msg := <-sub.MsgChan:
-					c.WriteResp(resputil.BulkStringsToRESPArray([]string{
+					conn.WriteResp(resputil.BulkStringsToRESPArray([]string{
 						"message",
 						msg.Channel,
 						string(msg.Payload),
@@ -144,9 +144,9 @@ func (s *AppState) AddSubscriber(c *client.Client, channel string) *Subscriber {
 		s.channelSubs[channel] = chanMap
 	}
 
-	chanMap[c.ID] = sub
+	chanMap[conn.ID] = sub
 
-	fmt.Printf("Subscriber connected: %s\n", c.RemoteAddr().String())
+	fmt.Printf("Subscriber connected: %s\n", conn.RemoteAddr().String())
 
 	return sub
 }
@@ -188,7 +188,7 @@ func (s *AppState) RemoveSubscriber(id uuid.UUID) {
 		}
 
 		delete(s.subscribers, id)
-		fmt.Printf("Subscriber disconnected: %s\n", sub.Client.RemoteAddr().String())
+		fmt.Printf("Subscriber disconnected: %s\n", sub.Conn.RemoteAddr().String())
 	}
 }
 
@@ -213,20 +213,20 @@ func (s *AppState) Publish(channel string, payload []byte) int {
 	return sent
 }
 
-func (s *AppState) AddReplica(c *client.Client) {
+func (s *AppState) AddReplica(conn *connection.Connection) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	s.replicas[c.ID] = &Replica{
-		Client:     c,
+	s.replicas[conn.ID] = &Replica{
+		Conn:       conn,
 		Offset:     0,
 		OffsetChan: make(chan int, 1),
 		Ctx:        ctx,
 		Cancel:     cancel,
 	}
-	fmt.Printf("Replica connected: %s\n", c.RemoteAddr().String())
+	fmt.Printf("Replica connected: %s\n", conn.RemoteAddr().String())
 }
 
 func (s *AppState) RemoveReplica(id uuid.UUID) {
@@ -237,7 +237,7 @@ func (s *AppState) RemoveReplica(id uuid.UUID) {
 		r.Cancel()
 
 		delete(s.replicas, id)
-		fmt.Printf("Replica disconnected: %s\n", r.Client.RemoteAddr().String())
+		fmt.Printf("Replica disconnected: %s\n", r.Conn.RemoteAddr().String())
 	}
 }
 

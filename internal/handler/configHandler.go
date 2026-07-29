@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
-func configHandler(req *request.Request, args []string) error {
+func configHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) < 2 {
 		return errors.New("CONFIG requires at least two arguments")
 	}
@@ -19,16 +19,16 @@ func configHandler(req *request.Request, args []string) error {
 
 	switch strings.ToUpper(args[0]) {
 	case "GET":
-		val, err := getConfig(req.State, cfgName)
+		val, err := getConfig(s, cfgName)
 		if err != nil {
 			return err
 		}
 
 		res := resputil.BulkStringsToRESPArray([]string{cfgName, val})
-		return writeResponse(req, res)
+		return writeResponse(c, res)
 
 	default:
-		return writeResponse(req, resp.RESPNilBulkString)
+		return writeResponse(c, resp.RESPNilBulkString)
 	}
 }
 

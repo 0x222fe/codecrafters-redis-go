@@ -4,12 +4,12 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
-func infoHandler(req *request.Request, args []string) error {
+func infoHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) == 0 {
 		return errors.New("INFO requires at least one argument")
 	}
@@ -19,10 +19,10 @@ func infoHandler(req *request.Request, args []string) error {
 	}
 
 	isReplica, repID, repOffset := false, "", 0
-	req.State.ReadState(func(s state.State) {
-		isReplica = s.IsReplica
-		repID = s.ReplicationID
-		repOffset = s.ReplicationOffset
+	s.ReadState(func(st state.State) {
+		isReplica = st.IsReplica
+		repID = st.ReplicationID
+		repOffset = st.ReplicationOffset
 	})
 
 	var role string
@@ -41,5 +41,5 @@ func infoHandler(req *request.Request, args []string) error {
 
 	res := resp.NewBulkString(&info)
 
-	return writeResponse(req, res)
+	return writeResponse(c, res)
 }

@@ -4,24 +4,25 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/geoutil"
 )
 
-func geodistHandler(req *request.Request, args []string) error {
+func geodistHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) != 3 {
 		return errors.New("GEODIST requires exactly 3 arguments")
 	}
 
 	key, a, b := args[0], args[1], args[2]
 
-	aScore, ok := req.State.GetStore().QuerySortedSetScore(key, a)
+	aScore, ok := s.GetStore().QuerySortedSetScore(key, a)
 	if !ok {
 		return fmt.Errorf("GEODIST: member %s not found", a)
 	}
 
-	bScore, ok := req.State.GetStore().QuerySortedSetScore(key, b)
+	bScore, ok := s.GetStore().QuerySortedSetScore(key, b)
 	if !ok {
 		return fmt.Errorf("GEODIST: member %s not found", b)
 	}
@@ -34,6 +35,6 @@ func geodistHandler(req *request.Request, args []string) error {
 	str := fmt.Sprintf("%.4f", dist)
 
 	res := resp.NewBulkString(&str)
-	writeResponse(req, res)
+	writeResponse(c, res)
 	return nil
 }

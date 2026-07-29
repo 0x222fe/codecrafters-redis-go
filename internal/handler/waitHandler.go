@@ -7,14 +7,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 	"github.com/google/uuid"
 )
 
-func waitHandler(req *request.Request, args []string) error {
+func waitHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) < 2 {
 		return errors.New("WAIT requires at least two arguments")
 	}
@@ -35,15 +35,15 @@ func waitHandler(req *request.Request, args []string) error {
 	}
 
 	if repCount == 0 {
-		return writeResponse(req, resp.NewInt(0))
+		return writeResponse(c, resp.NewInt(0))
 	}
 
-	ctx, cancel := context.WithTimeout(req.Ctx, time.Duration(timeoutMillis)*time.Millisecond)
+	ctx, cancel := context.WithTimeout(c.Ctx, time.Duration(timeoutMillis)*time.Millisecond)
 	defer cancel()
 
 	command := resputil.BulkStringsToRESPArray([]string{"REPLCONF", "GETACK", "*"})
 
-	replicas := req.State.GetReplicas()
+	replicas := s.GetReplicas()
 	acked, jobs := make(map[uuid.UUID]struct{}, len(replicas)), make(map[uuid.UUID]struct{}, len(replicas))
 
 	syncedChan, doneChan := make(chan uuid.UUID, len(replicas)), make(chan uuid.UUID, len(replicas))
@@ -51,12 +51,12 @@ func waitHandler(req *request.Request, args []string) error {
 	defer ticker.Stop()
 
 	masterOffset := 0
-	req.State.ReadState(func(s state.State) {
-		masterOffset = s.ReplicationOffset
+	s.ReadState(func(st state.State) {
+		masterOffset = st.ReplicationOffset
 	})
 	for _, rep := range replicas {
 		if rep.Offset >= masterOffset {
-			acked[rep.Client.ID] = struct{}{}
+			acked[rep.Conn.ID] = struct{}{}
 		}
 	}
 
@@ -77,45 +77,45 @@ outter:
 		case id := <-doneChan:
 			delete(jobs, id)
 		case <-ticker.C:
-			replicas := req.State.GetReplicas()
+			replicas := s.GetReplicas()
 			for _, r := range replicas {
-				if _, ok := acked[r.Client.ID]; ok {
+				if _, ok := acked[r.Conn.ID]; ok {
 					continue
 				}
 
-				if _, ok := jobs[r.Client.ID]; ok {
+				if _, ok := jobs[r.Conn.ID]; ok {
 					continue
 				}
 
-				_, err := r.Client.Write(command.Encode())
+				_, err := r.Conn.Write(command.Encode())
 				if err != nil {
-					fmt.Printf("Error writing to replica %s: %v\n", r.Client.ID, err)
+					fmt.Printf("Error writing to replica %s: %v\n", r.Conn.ID, err)
 					continue
 				}
 
-				go getRepOffsetUpdate(ctx, req, r, syncedChan, doneChan)
+				go getRepOffsetUpdate(ctx, c, s, r, syncedChan, doneChan)
 
-				jobs[r.Client.ID] = struct{}{}
+				jobs[r.Conn.ID] = struct{}{}
 			}
 		}
 	}
 
 	ackCount := int64(len(acked))
-	return writeResponse(req, resp.NewInt(int64(ackCount)))
+	return writeResponse(c, resp.NewInt(int64(ackCount)))
 }
 
-func getRepOffsetUpdate(ctx context.Context, req *request.Request, rep *state.Replica, syncedChan chan uuid.UUID, doneChan chan uuid.UUID) {
-	defer func() { doneChan <- rep.Client.ID }()
+func getRepOffsetUpdate(ctx context.Context, c *client.Client, s *state.AppState, rep *state.Replica, syncedChan chan uuid.UUID, doneChan chan uuid.UUID) {
+	defer func() { doneChan <- rep.Conn.ID }()
 
 	select {
 	case count := <-rep.OffsetChan:
 		masterOffset := 0
-		req.State.ReadState(func(s state.State) {
-			masterOffset = s.ReplicationOffset
+		s.ReadState(func(st state.State) {
+			masterOffset = st.ReplicationOffset
 		})
 
 		if count >= masterOffset {
-			syncedChan <- rep.Client.ID
+			syncedChan <- rep.Conn.ID
 		}
 	case <-ctx.Done():
 	case <-rep.Ctx.Done():

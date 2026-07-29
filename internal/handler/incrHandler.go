@@ -4,23 +4,24 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 )
 
-func incrHandler(req *request.Request, args []string) error {
+func incrHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) < 1 {
 		return errors.New("INCR requires at least 1 argument")
 	}
 
 	key := args[0]
 
-	val, ok := req.State.GetStore().GetExact(key, store.String)
+	val, ok := s.GetStore().GetExact(key, store.String)
 	if !ok {
-		req.State.GetStore().Set(key, "1", store.String, nil)
+		s.GetStore().Set(key, "1", store.String, nil)
 		res := resp.NewInt(1)
-		writeResponse(req, res)
+		writeResponse(c, res)
 		return nil
 	}
 
@@ -35,8 +36,8 @@ func incrHandler(req *request.Request, args []string) error {
 	}
 
 	n++
-	req.State.GetStore().Set(key, strconv.FormatInt(n, 10), store.String, nil)
+	s.GetStore().Set(key, strconv.FormatInt(n, 10), store.String, nil)
 	res := resp.NewInt(n)
-	writeResponse(req, res)
+	writeResponse(c, res)
 	return nil
 }

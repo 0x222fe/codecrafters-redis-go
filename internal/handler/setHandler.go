@@ -7,12 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 )
 
-func setHandler(req *request.Request, args []string) error {
+func setHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) < 2 {
 		return errors.New("SET requires at least two arguments")
 	}
@@ -42,10 +43,10 @@ func setHandler(req *request.Request, args []string) error {
 		*expireAt = time.Now().Add(time.Duration(expMillis) * time.Millisecond).UnixMilli()
 	}
 
-	req.State.GetStore().Set(args[0], args[1], store.String, expireAt)
+	s.GetStore().Set(args[0], args[1], store.String, expireAt)
 
-	if req.Propagated {
+	if c.Propagated {
 		return nil
 	}
-	return writeResponse(req, resp.NewString("OK"))
+	return writeResponse(c, resp.NewString("OK"))
 }

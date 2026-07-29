@@ -1,15 +1,17 @@
-package request
+package client
 
 import (
+	"github.com/0x222fe/codecrafters-redis-go/internal/command"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 )
 
 type TransactionCommandHandler interface {
-	Handle(req *Request, cmd Command) error
+	Handle(c *Client, s *state.AppState, cmd command.Command) error
 }
 
 type TxnCommand struct {
-	Command Command
+	Command command.Command
 	Handler TransactionCommandHandler
 }
 

@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 )
 
-func psyncHandler(req *request.Request, args []string) error {
+func psyncHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) < 2 {
 		return errors.New("PSYNC requires at least 2 arguments")
 	}
@@ -22,19 +22,19 @@ func psyncHandler(req *request.Request, args []string) error {
 
 	replicationID, replicationOffset := "", 0
 
-	req.State.ReadState(func(s state.State) {
-		replicationID = s.ReplicationID
-		replicationOffset = s.ReplicationOffset
+	s.ReadState(func(st state.State) {
+		replicationID = st.ReplicationID
+		replicationOffset = st.ReplicationOffset
 	})
 
 	psyncRes := resp.NewString("FULLRESYNC " + replicationID + " " + strconv.Itoa(replicationOffset))
 
-	err := writeResponse(req, psyncRes)
+	err := writeResponse(c, psyncRes)
 	if err != nil {
 		return err
 	}
 
-	req.State.AddReplica(req.Client)
+	s.AddReplica(c.Conn)
 
 	emptyRdb := "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog=="
 
@@ -44,11 +44,11 @@ func psyncHandler(req *request.Request, args []string) error {
 	}
 
 	header := fmt.Appendf(nil, "$%d\r\n", len(fileBytes))
-	if _, err := req.Client.Write(header); err != nil {
+	if _, err := c.Conn.Write(header); err != nil {
 		return fmt.Errorf("failed to write RDB header: %w", err)
 	}
 
-	if _, err := req.Client.Write(fileBytes); err != nil {
+	if _, err := c.Conn.Write(fileBytes); err != nil {
 		return fmt.Errorf("failed to write RDB file: %w", err)
 	}
 

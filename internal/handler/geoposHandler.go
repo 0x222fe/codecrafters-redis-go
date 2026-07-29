@@ -4,13 +4,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/geoutil"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
-func geoposHandler(req *request.Request, args []string) error {
+func geoposHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) < 2 {
 		return errors.New("GEOPOS requires at least 2 arguments")
 	}
@@ -20,7 +21,7 @@ func geoposHandler(req *request.Request, args []string) error {
 	arr := make([]resp.RESPValue, 0, len(locations))
 
 	for _, location := range locations {
-		score, ok := req.State.GetStore().QuerySortedSetScore(key, location)
+		score, ok := s.GetStore().QuerySortedSetScore(key, location)
 
 		val := resp.RESPNilArray
 		if ok {
@@ -32,6 +33,6 @@ func geoposHandler(req *request.Request, args []string) error {
 	}
 
 	res := resp.NewArray(arr)
-	writeResponse(req, res)
+	writeResponse(c, res)
 	return nil
 }

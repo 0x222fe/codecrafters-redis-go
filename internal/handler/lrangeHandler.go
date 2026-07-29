@@ -4,13 +4,14 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
-func lrangeHandler(req *request.Request, args []string) error {
+func lrangeHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) != 3 {
 		return errors.New("LRANGE requires exactly 3 arguments")
 	}
@@ -27,15 +28,15 @@ func lrangeHandler(req *request.Request, args []string) error {
 		return errors.New("invalid end")
 	}
 
-	v, _, ok := req.State.GetStore().Get(key)
+	v, _, ok := s.GetStore().Get(key)
 	list, parseOk := v.(*store.RedisList)
 	if !ok || !parseOk {
-		writeResponse(req, resp.RESPEmptyArray)
+		writeResponse(c, resp.RESPEmptyArray)
 		return nil
 	}
 
 	values := list.GetRange(start, end)
 	res := resputil.BulkStringsToRESPArray(values)
-	writeResponse(req, res)
+	writeResponse(c, res)
 	return nil
 }

@@ -3,19 +3,20 @@ package handler
 import (
 	"errors"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 )
 
-func subscribeHandler(req *request.Request, args []string) error {
+func subscribeHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) < 1 {
 		return errors.New("SUBSCRIBE requires at least one argument")
 	}
 
 	subMsg := "subscribe"
 	for _, channel := range args {
-		sub := req.State.AddSubscriber(req.Client, channel)
-		req.Client.WriteResp(
+		sub := s.AddSubscriber(c.Conn, channel)
+		c.Conn.WriteResp(
 			resp.NewArray(
 				[]resp.RESPValue{
 					resp.NewBulkString(&subMsg),
@@ -26,7 +27,7 @@ func subscribeHandler(req *request.Request, args []string) error {
 		)
 	}
 
-	req.SubMode = true
+	c.SubMode = true
 
 	return nil
 }

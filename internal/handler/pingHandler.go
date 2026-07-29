@@ -1,17 +1,18 @@
 package handler
 
 import (
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
-func pingHandler(req *request.Request, args []string) error {
-	if req.Propagated {
+func pingHandler(c *client.Client, s *state.AppState, args []string) error {
+	if c.Propagated {
 		return nil
 	}
-	if req.SubMode {
-		return writeResponse(req, resputil.BulkStringsToRESPArray([]string{"pong", ""}))
+	if c.SubMode {
+		return writeResponse(c, resputil.BulkStringsToRESPArray([]string{"pong", ""}))
 	}
-	return writeResponse(req, resp.NewString("PONG"))
+	return writeResponse(c, resp.NewString("PONG"))
 }

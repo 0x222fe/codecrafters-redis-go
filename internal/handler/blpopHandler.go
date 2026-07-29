@@ -6,13 +6,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
-func blpopHandler(req *request.Request, args []string) error {
+func blpopHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) < 2 {
 		return errors.New("BLPOP requires at least 2 arguments")
 	}
@@ -29,7 +30,7 @@ func blpopHandler(req *request.Request, args []string) error {
 	}
 
 	for _, key := range keys {
-		v, _, ok := req.State.GetStore().Get(key)
+		v, _, ok := s.GetStore().Get(key)
 		list, parseOk := v.(*store.RedisList)
 		if ok && !parseOk {
 			return store.ERRWrongType
@@ -44,7 +45,7 @@ func blpopHandler(req *request.Request, args []string) error {
 			continue
 		}
 		writeResponse(
-			req,
+			c,
 			resputil.BulkStringsToRESPArray([]string{key, items[0]}),
 		)
 		return nil
@@ -59,12 +60,12 @@ func blpopHandler(req *request.Request, args []string) error {
 
 	defer func() {
 		for _, key := range keys {
-			req.State.GetStore().UnregisterListPushHandler(key, req.Client.ID)
+			s.GetStore().UnregisterListPushHandler(key, c.Conn.ID)
 		}
 	}()
 
 	for _, key := range keys {
-		v, _, ok := req.State.GetStore().Get(key)
+		v, _, ok := s.GetStore().Get(key)
 		_, parseOk := v.(*store.RedisList)
 		if ok && !parseOk {
 			return store.ERRWrongType
@@ -73,7 +74,7 @@ func blpopHandler(req *request.Request, args []string) error {
 		ch := make(chan string, 1)
 
 		go func() {
-			req.State.GetStore().RegisterListPushHandler(key, req.Client.ID, ch)
+			s.GetStore().RegisterListPushHandler(key, c.Conn.ID, ch)
 			item := <-ch
 			doneChan <- [2]string{key, item}
 
@@ -83,15 +84,15 @@ func blpopHandler(req *request.Request, args []string) error {
 	select {
 	case data := <-doneChan:
 		key := data[0]
-		v, _ := req.State.GetStore().GetExact(key, store.List)
+		v, _ := s.GetStore().GetExact(key, store.List)
 		list, ok := v.(*store.RedisList)
 		if ok {
 			list.LPop(1)
 		}
-		writeResponse(req, resputil.BulkStringsToRESPArray(data[:]))
+		writeResponse(c, resputil.BulkStringsToRESPArray(data[:]))
 		return nil
 	case <-timeoutCh:
-		writeResponse(req, resp.RESPNilArray)
+		writeResponse(c, resp.RESPNilArray)
 		return nil
 	}
 }

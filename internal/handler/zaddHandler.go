@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 )
 
-func zaddHandler(req *request.Request, args []string) error {
+func zaddHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) < 3 {
 		return errors.New("ZADD requires at least 3 arguments")
 	}
@@ -35,10 +36,10 @@ func zaddHandler(req *request.Request, args []string) error {
 		})
 	}
 
-	count := req.State.GetStore().AddToSortedSet(key, members)
+	count := s.GetStore().AddToSortedSet(key, members)
 
 	res := resp.NewInt(int64(count))
 
-	writeResponse(req, res)
+	writeResponse(c, res)
 	return nil
 }

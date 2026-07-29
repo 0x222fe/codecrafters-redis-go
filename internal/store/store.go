@@ -26,6 +26,8 @@ type StreamInsertHandlerRegistry map[uuid.UUID]StreamInsertHandler
 
 type ListPushChanRgistry = orderedmap.OrderedMap[uuid.UUID, chan string]
 
+type WatchRegistry map[uuid.UUID]map[string]uint32
+
 type Store struct {
 	dataMu sync.RWMutex
 	data   map[string]StoreItem
@@ -38,6 +40,9 @@ type Store struct {
 
 	listMu         sync.RWMutex
 	listRegistries map[string]*ListPushChanRgistry
+
+	watchMu       sync.RWMutex
+	watchRegistry WatchRegistry
 }
 
 func NewStore() *Store {
@@ -46,13 +51,15 @@ func NewStore() *Store {
 		sortedSetEntries: make(map[string]*sortedSetEntry),
 		streamRegistries: make(map[string]StreamInsertHandlerRegistry),
 		listRegistries:   make(map[string]*ListPushChanRgistry),
+		watchRegistry:    make(WatchRegistry),
 	}
 }
 
 type StoreItem struct {
-	val      any
-	valType  ValueType
-	expireAt *int64
+	val        any
+	valType    ValueType
+	expireAt   *int64
+	modCounter uint32
 }
 
 var (
@@ -65,12 +72,12 @@ func (store *Store) Get(key string) (any, ValueType, bool) {
 
 	item, ok := store.data[key]
 
-	if !ok {
+	if !ok || item.val == nil {
 		return nil, None, false
 	}
 
 	if item.expireAt != nil && *item.expireAt < time.Now().UnixMilli() {
-		delete(store.data, key)
+		store.deleteLocked(key)
 		return nil, None, false
 	}
 
@@ -94,30 +101,33 @@ func (store *Store) Set(key string, val any, valType ValueType, expireAt *int64)
 	store.dataMu.Lock()
 	defer store.dataMu.Unlock()
 
+	var counter uint32
+	item, ok := store.data[key]
+	if ok {
+		counter = item.modCounter
+	}
+
 	store.data[key] = StoreItem{
-		val:      val,
-		valType:  valType,
-		expireAt: expireAt,
+		val:        val,
+		valType:    valType,
+		expireAt:   expireAt,
+		modCounter: counter + 1,
 	}
 }
 
-func (store *Store) Type(key string) string {
-	store.dataMu.RLock()
-	defer store.dataMu.RUnlock()
+func (store *Store) Delete(key string) {
+	store.dataMu.Lock()
+	defer store.dataMu.Unlock()
+	store.deleteLocked(key)
+}
 
-	item, ok := store.data[key]
+func (store *Store) Type(key string) string {
+	_, vType, ok := store.Get(key)
 	if !ok {
 		return string(None)
 	}
 
-	if item.expireAt != nil && *item.expireAt < time.Now().UnixMilli() {
-		store.dataMu.Lock()
-		delete(store.data, key)
-		store.dataMu.Unlock()
-		return string(None)
-	}
-
-	return string(item.valType)
+	return string(vType)
 }
 
 func (store *Store) Keys() []string {
@@ -125,13 +135,15 @@ func (store *Store) Keys() []string {
 	defer store.dataMu.RUnlock()
 
 	keys := make([]string, 0, len(store.data))
-	for key := range store.data {
-		keys = append(keys, key)
+	for key, item := range store.data {
+		if item.val != nil {
+			keys = append(keys, key)
+		}
 	}
 	return keys
 }
 
-func (store *Store) RegisterStreamInsertHandler(streamKey string, clientID uuid.UUID, handler StreamInsertHandler) {
+func (store *Store) RegisterStreamInsertHandler(streamKey string, connID uuid.UUID, handler StreamInsertHandler) {
 	store.streamMu.Lock()
 	defer store.streamMu.Unlock()
 
@@ -141,7 +153,7 @@ func (store *Store) RegisterStreamInsertHandler(streamKey string, clientID uuid.
 		store.streamRegistries[streamKey] = registry
 	}
 
-	registry[clientID] = handler
+	registry[connID] = handler
 }
 
 func (store *Store) UnregisterStreamInsertHandler(streamKey string, handlerID uuid.UUID) {
@@ -165,7 +177,7 @@ func (store *Store) IterateStreamInsertHandlers(streamKey string, entry *StreamE
 	}
 }
 
-func (store *Store) RegisterListPushHandler(listKey string, clientID uuid.UUID, ch chan string) {
+func (store *Store) RegisterListPushHandler(listKey string, connID uuid.UUID, ch chan string) {
 	store.listMu.Lock()
 	defer store.listMu.Unlock()
 
@@ -175,15 +187,15 @@ func (store *Store) RegisterListPushHandler(listKey string, clientID uuid.UUID, 
 		store.listRegistries[listKey] = registry
 	}
 
-	registry.Set(clientID, ch)
+	registry.Set(connID, ch)
 }
 
-func (store *Store) UnregisterListPushHandler(listKey string, clientID uuid.UUID) {
+func (store *Store) UnregisterListPushHandler(listKey string, connID uuid.UUID) {
 	store.listMu.Lock()
 	defer store.listMu.Unlock()
 
 	if registry, ok := store.listRegistries[listKey]; ok {
-		registry.Delete(clientID)
+		registry.Delete(connID)
 	}
 }
 
@@ -204,5 +216,63 @@ func (store *Store) NotifyListPush(listKey string, value string) {
 	select {
 	case ch <- value:
 	default:
+	}
+}
+
+func (store *Store) Watch(keys []string, connID uuid.UUID) {
+	store.watchMu.Lock()
+	store.dataMu.RLock()
+	defer store.watchMu.Unlock()
+	defer store.dataMu.RUnlock()
+
+	clientMap, ok := store.watchRegistry[connID]
+	if !ok {
+		clientMap = make(map[string]uint32)
+		store.watchRegistry[connID] = clientMap
+	}
+
+	for _, key := range keys {
+		var currCounter uint32
+		item, ok := store.data[key]
+		if ok {
+			currCounter = item.modCounter
+		}
+		clientMap[key] = currCounter
+	}
+}
+
+func (store *Store) Unwatch(connID uuid.UUID) {
+	store.watchMu.Lock()
+	defer store.watchMu.Unlock()
+
+	delete(store.watchRegistry, connID)
+}
+
+func (store *Store) WatchesValid(connID uuid.UUID) bool {
+	store.watchMu.Lock()
+	store.dataMu.RLock()
+	defer store.watchMu.Unlock()
+	defer store.dataMu.RUnlock()
+
+	clientMap, ok := store.watchRegistry[connID]
+	if !ok {
+		return true
+	}
+
+	for key := range clientMap {
+		item := store.data[key]
+		if item.modCounter != clientMap[key] {
+			return false
+		}
+	}
+	return true
+}
+
+func (store *Store) deleteLocked(key string) {
+	item, ok := store.data[key]
+	if ok {
+		item.val = nil
+		item.modCounter += 1
+		store.data[key] = item
 	}
 }

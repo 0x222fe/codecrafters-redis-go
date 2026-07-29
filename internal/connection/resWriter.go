@@ -1,4 +1,4 @@
-package client
+package connection
 
 import "github.com/0x222fe/codecrafters-redis-go/internal/resp"
 

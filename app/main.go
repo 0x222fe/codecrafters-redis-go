@@ -14,10 +14,11 @@ import (
 	"strings"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/command"
 	"github.com/0x222fe/codecrafters-redis-go/internal/config"
+	"github.com/0x222fe/codecrafters-redis-go/internal/connection"
 	"github.com/0x222fe/codecrafters-redis-go/internal/handler"
 	"github.com/0x222fe/codecrafters-redis-go/internal/rdb"
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/user"
@@ -92,61 +93,61 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 	return state, nil
 }
 
-func handleConnection(conn net.Conn, s *state.AppState) {
-	defer conn.Close()
+func handleConnection(rawConn net.Conn, s *state.AppState) {
+	defer rawConn.Close()
 
 	defaultUser, ok := s.GetUser(user.DefaultUserName)
 	if !ok || !defaultUser.ValidatePassword("") {
 		defaultUser = nil
 	}
-	client := client.NewClient(conn, defaultUser)
+	conn := connection.NewConnection(rawConn, defaultUser)
 
 	defer func() {
-		s.RemoveReplica(client.ID)
+		s.RemoveReplica(conn.ID)
 	}()
 
-	reader := bufio.NewReader(conn)
+	reader := bufio.NewReader(rawConn)
 
-	req := request.NewRequest(context.Background(), client, s)
+	c := client.NewClient(context.Background(), conn)
 
 	for {
 		respVal, _, err := resp.DecodeRESPInputExact(reader, resp.RESPArr)
 		if err != nil {
 			if err == io.EOF {
-				fmt.Printf("Connection closed by client: %s\n", conn.RemoteAddr().String())
+				fmt.Printf("Connection closed by client: %s\n", rawConn.RemoteAddr().String())
 				return
 			}
 
-			conn.Write(resp.NewError(err).Encode())
+			rawConn.Write(resp.NewError(err).Encode())
 			continue
 		}
 
-		cmd, err := request.ParseCommandFromRESP(respVal)
+		cmd, err := command.ParseCommandFromRESP(respVal)
 		if err != nil {
-			conn.Write(resp.NewError(err).Encode())
+			rawConn.Write(resp.NewError(err).Encode())
 			continue
 		}
 		fmt.Printf("Received command: %s\n", cmd.Name)
 
-		err = handler.RunCommand(req, cmd)
+		err = handler.RunCommand(c, s, cmd)
 		if err != nil {
-			conn.Write(resp.NewError(err).Encode())
+			rawConn.Write(resp.NewError(err).Encode())
 			continue
 		}
 	}
 }
 
-func serveMaster(appState *state.AppState, conn net.Conn, reader *bufio.Reader) {
+func serveMaster(appState *state.AppState, rawConn net.Conn, reader *bufio.Reader) {
 	defer func() {
-		defer conn.Close()
+		defer rawConn.Close()
 		fmt.Println("Master connection closed")
 	}()
 
 	defaultUser, _ := appState.GetUser(user.DefaultUserName)
-	client := client.NewClient(conn, defaultUser)
+	conn := connection.NewConnection(rawConn, defaultUser)
 
-	req := request.NewRequest(context.Background(), client, appState)
-	req.Propagated = true
+	c := client.NewClient(context.Background(), conn)
+	c.Propagated = true
 	for {
 		respVal, bytesRead, err := resp.DecodeRESPInputExact(reader, resp.RESPArr)
 		if err != nil {
@@ -159,21 +160,21 @@ func serveMaster(appState *state.AppState, conn net.Conn, reader *bufio.Reader) 
 			continue
 		}
 
-		cmd, err := request.ParseCommandFromRESP(respVal)
+		cmd, err := command.ParseCommandFromRESP(respVal)
 		if err != nil {
 			fmt.Printf("Error parsing command from master: %s\n", err.Error())
 			continue
 		}
 		fmt.Println("Received command from master:", cmd.Name)
 
-		err = handler.RunCommand(req, cmd)
+		err = handler.RunCommand(c, appState, cmd)
 		if err != nil {
 			fmt.Printf("Error executing command from master: %s\n", err.Error())
 			continue
 		}
 
-		appState.WriteState(func(s *state.State) {
-			s.ReplicationOffset += bytesRead
+		appState.WriteState(func(st *state.State) {
+			st.ReplicationOffset += bytesRead
 		})
 	}
 }

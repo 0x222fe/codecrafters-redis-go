@@ -3,22 +3,23 @@ package handler
 import (
 	"errors"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 )
 
-func zcardHandler(req *request.Request, args []string) error {
+func zcardHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) != 1 {
 		return errors.New("ZRANGE requires exactly 1 argument")
 	}
 
 	key := args[0]
 
-	count := req.State.GetStore().CountSortedSetMembers(key)
+	count := s.GetStore().CountSortedSetMembers(key)
 
 	var res = resp.NewInt(int64(count))
 
-	writeResponse(req, res)
+	writeResponse(c, res)
 
 	return nil
 }

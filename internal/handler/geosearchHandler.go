@@ -6,12 +6,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/geoutil"
 	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
-func geosearchHandler(req *request.Request, args []string) error {
+func geosearchHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) < 6 {
 		return errors.New("GEOSEARCH requires at least 6 arguments")
 	}
@@ -22,13 +23,13 @@ func geosearchHandler(req *request.Request, args []string) error {
 
 	switch mode {
 	case "FROMLONLAT":
-		return fromLonLat(req, key, args)
+		return fromLonLat(c, s, key, args)
 	default:
 		return fmt.Errorf("GEOSEARCH mode %s not supported", mode)
 	}
 }
 
-func fromLonLat(req *request.Request, key string, args []string) error {
+func fromLonLat(c *client.Client, s *state.AppState, key string, args []string) error {
 	if len(args) < 7 {
 		return errors.New("GEOSEARCH FROMLONLAT requires at least 7 arguments")
 	}
@@ -67,7 +68,7 @@ func fromLonLat(req *request.Request, key string, args []string) error {
 
 	minScore, maxScore := geoutil.NeighborScoreRange(longitude, latitude, radius)
 
-	locations := req.State.GetStore().QuerySortedSetMemberByScore(key, minScore, maxScore)
+	locations := s.GetStore().QuerySortedSetMemberByScore(key, minScore, maxScore)
 
 	result := make([]string, 0, len(locations))
 	for _, location := range locations {
@@ -79,7 +80,7 @@ func fromLonLat(req *request.Request, key string, args []string) error {
 	}
 
 	res := resputil.BulkStringsToRESPArray(result)
-	writeResponse(req, res)
+	writeResponse(c, res)
 
 	return nil
 }

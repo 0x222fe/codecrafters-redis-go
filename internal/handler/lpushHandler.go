@@ -3,12 +3,13 @@ package handler
 import (
 	"errors"
 
-	"github.com/0x222fe/codecrafters-redis-go/internal/request"
+	"github.com/0x222fe/codecrafters-redis-go/internal/client"
+	"github.com/0x222fe/codecrafters-redis-go/internal/state"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 )
 
-func lpushHandler(req *request.Request, args []string) error {
+func lpushHandler(c *client.Client, s *state.AppState, args []string) error {
 	if len(args) < 2 {
 		return errors.New("LPUSH requires at least 2 arguments")
 	}
@@ -16,10 +17,10 @@ func lpushHandler(req *request.Request, args []string) error {
 	key, items := args[0], args[1:]
 
 	var list *store.RedisList
-	v, t, ok := req.State.GetStore().Get(key)
+	v, t, ok := s.GetStore().Get(key)
 	if !ok {
 		list = store.NewList()
-		req.State.GetStore().Set(key, list, store.List, nil)
+		s.GetStore().Set(key, list, store.List, nil)
 	} else {
 		l, parseOk := v.(*store.RedisList)
 		if t != store.List || !parseOk {
@@ -30,11 +31,11 @@ func lpushHandler(req *request.Request, args []string) error {
 
 	count := list.LPush(items...)
 
-	s := req.State.GetStore()
+	store := s.GetStore()
 	for _, item := range items {
-		s.NotifyListPush(key, item)
+		store.NotifyListPush(key, item)
 	}
 
-	writeResponse(req, resp.NewInt(int64(count)))
+	writeResponse(c, resp.NewInt(int64(count)))
 	return nil
 }
