@@ -36,6 +36,21 @@ func TestGenerateScoreMatchesRedis(t *testing.T) {
 	}
 }
 
+func TestNeighborScoreRange_ExcludesPointWithinRadius(t *testing.T) {
+	centerLo, centerLa := 150.0, 0.0
+	pointLo, pointLa := -179.0, 0.0
+	radius := 5000000.0
+
+	minScore, maxScore := NeighborScoreRange(centerLo, centerLa, radius)
+	pointScore := EncodeScore(pointLo, pointLa)
+	dist := Distance(centerLo, centerLa, pointLo, pointLa)
+
+	if dist <= radius && (pointScore < minScore || pointScore > maxScore) {
+		t.Errorf("point (%.0f, %.0f) is %.0f km from center (%.0f, %.0f) (radius %.0f km), but score=%.0f is outside [%.0f, %.0f]",
+			pointLo, pointLa, dist/1000, centerLo, centerLa, radius/1000, pointScore, minScore, maxScore)
+	}
+}
+
 func TestDecodeScoreMatchesInput(t *testing.T) {
 	const epsilon = 1e-5
 

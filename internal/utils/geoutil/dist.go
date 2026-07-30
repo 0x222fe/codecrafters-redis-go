@@ -37,19 +37,20 @@ func NeighborScoreRange(lo, la, radius float64) (float64, float64) {
 		{-dLon, dLat},  // NW
 	}
 
-	scores := make([]float64, 1, 9)
+	scores := make([]float64, 1, 15)
 	scores[0] = EncodeScore(lo, la)
 
 	for _, dir := range directions {
 		nLo := lo + dir[0]
 		nLa := la + dir[1]
 
-		if nLo < MinLongitude {
-			nLo = MinLongitude
+		for nLo < MinLongitude {
+			nLo += 360
 		}
-		if nLo > MaxLongitude {
-			nLo = MaxLongitude
+		for nLo > MaxLongitude {
+			nLo -= 360
 		}
+
 		if nLa < MinLatitude {
 			nLa = MinLatitude
 		}
@@ -58,6 +59,20 @@ func NeighborScoreRange(lo, la, radius float64) (float64, float64) {
 		}
 
 		scores = append(scores, EncodeScore(nLo, nLa))
+	}
+
+	if lo-dLon < MinLongitude || lo+dLon > MaxLongitude {
+		for _, dLa := range []float64{0, dLat, -dLat} {
+			nLa := la + dLa
+			if nLa < MinLatitude {
+				nLa = MinLatitude
+			}
+			if nLa > MaxLatitude {
+				nLa = MaxLatitude
+			}
+			scores = append(scores, EncodeScore(MinLongitude, nLa))
+			scores = append(scores, EncodeScore(MaxLongitude, nLa))
+		}
 	}
 
 	minScore := scores[0]
