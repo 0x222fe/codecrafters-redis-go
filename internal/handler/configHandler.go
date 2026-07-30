@@ -39,6 +39,18 @@ func getConfig(appState *state.AppState, cfgName string) (string, error) {
 		return cfg.Dir, nil
 	case "dbfilename":
 		return cfg.Dbfilename, nil
+	case "appendonly":
+		r := "no"
+		if cfg.AppendOnly {
+			r = "yes"
+		}
+		return r, nil
+	case "appenddirname":
+		return cfg.AppendDirname, nil
+	case "appendfilename":
+		return cfg.AppendFilename, nil
+	case "appendfsync":
+		return cfg.AppendFsync, nil
 	default:
 		return "", fmt.Errorf("unknown configuration parameter: %s", cfgName)
 	}

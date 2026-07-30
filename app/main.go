@@ -62,12 +62,19 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 	var r *rdb.RDB
 	var err error
 
-	filename := filepath.Join(cfg.Dir, cfg.Dbfilename)
-	if filename != "" {
+	if cfg.Dbfilename != "" {
+		filename := filepath.Join(cfg.Dir, cfg.Dbfilename)
 		r, err = rdb.ReadRDBFile(filename)
 		if err != nil {
 			fmt.Printf("Failed to read RDB file: %s\n", err.Error())
 			r = nil
+		}
+	}
+
+	if cfg.AppendOnly {
+		path := filepath.Join(cfg.Dir, cfg.AppendDirname)
+		if err := os.MkdirAll(path, 0755); err != nil {
+			return nil, fmt.Errorf("create dir %s: %w", path, err)
 		}
 	}
 
