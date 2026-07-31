@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func (r RESPValue) Encode() []byte {
+func (r RESPValue) Bytes() []byte {
 	switch r.valType {
 	case RESPStr:
 		//INFO: strVal should never be nil for respStr and respErr
@@ -31,7 +31,7 @@ func (r RESPValue) Encode() []byte {
 		}
 		bytes := fmt.Appendf(nil, "*%d\r\n", len(r.arrVal))
 		for _, elem := range r.arrVal {
-			elemBytes := elem.Encode()
+			elemBytes := elem.Bytes()
 			bytes = append(bytes, elemBytes...)
 		}
 		return bytes

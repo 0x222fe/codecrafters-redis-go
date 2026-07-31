@@ -22,7 +22,7 @@ func psyncHandler(c *client.Client, s *state.AppState, args []string) error {
 
 	replicationID, replicationOffset := "", 0
 
-	s.ReadState(func(st state.State) {
+	s.ReadState(func(st state.ReplicaState) {
 		replicationID = st.ReplicationID
 		replicationOffset = st.ReplicationOffset
 	})

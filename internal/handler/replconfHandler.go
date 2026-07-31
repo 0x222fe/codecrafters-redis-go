@@ -35,7 +35,7 @@ func replconfGETACK(c *client.Client, s *state.AppState, args []string) error {
 	}
 
 	offset := 0
-	s.ReadState(func(st state.State) {
+	s.ReadState(func(st state.ReplicaState) {
 		offset = st.ReplicationOffset
 	})
 

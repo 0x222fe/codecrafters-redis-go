@@ -51,7 +51,7 @@ func waitHandler(c *client.Client, s *state.AppState, args []string) error {
 	defer ticker.Stop()
 
 	masterOffset := 0
-	s.ReadState(func(st state.State) {
+	s.ReadState(func(st state.ReplicaState) {
 		masterOffset = st.ReplicationOffset
 	})
 	for _, rep := range replicas {
@@ -87,7 +87,7 @@ outter:
 					continue
 				}
 
-				_, err := r.Conn.Write(command.Encode())
+				_, err := r.Conn.Write(command.Bytes())
 				if err != nil {
 					fmt.Printf("Error writing to replica %s: %v\n", r.Conn.ID, err)
 					continue
@@ -110,7 +110,7 @@ func getRepOffsetUpdate(ctx context.Context, c *client.Client, s *state.AppState
 	select {
 	case count := <-rep.OffsetChan:
 		masterOffset := 0
-		s.ReadState(func(st state.State) {
+		s.ReadState(func(st state.ReplicaState) {
 			masterOffset = st.ReplicationOffset
 		})
 

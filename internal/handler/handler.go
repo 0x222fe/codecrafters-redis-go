@@ -8,7 +8,6 @@ import (
 	"github.com/0x222fe/codecrafters-redis-go/internal/command"
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
 	"github.com/0x222fe/codecrafters-redis-go/internal/state"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
 type commandSpec struct {
@@ -101,7 +100,7 @@ func RunCommand(c *client.Client, s *state.AppState, cmd command.Command) error 
 	}
 
 	var isReplica bool
-	s.ReadState(func(st state.State) {
+	s.ReadState(func(st state.ReplicaState) {
 		isReplica = st.IsReplica
 	})
 
@@ -138,10 +137,10 @@ func RunCommand(c *client.Client, s *state.AppState, cmd command.Command) error 
 	}
 
 	if spec.cmdType == command.TypeWrite && !isReplica {
-		replicaCommand := resputil.BulkStringsToRESPArray(append([]string{cmdName}, cmd.Args...))
-		encoded := replicaCommand.Encode()
+		replicaCommand := cmd.EncodeRESP()
+		encoded := replicaCommand.Bytes()
 
-		s.WriteState(func(st *state.State) {
+		s.WriteState(func(st *state.ReplicaState) {
 			st.ReplicationOffset += len(encoded)
 		})
 

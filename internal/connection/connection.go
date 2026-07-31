@@ -36,7 +36,7 @@ func (conn *Connection) SetUser(user *user.User) {
 }
 
 func (conn *Connection) WriteResp(resp resp.RESPValue) error {
-	_, err := conn.Write(resp.Encode())
+	_, err := conn.Write(resp.Bytes())
 	return err
 }
 

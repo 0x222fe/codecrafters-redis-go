@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/resp"
+	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 )
 
 type CommandKey string
@@ -98,4 +99,8 @@ func ParseCommandFromRESP(v resp.RESPValue) (Command, error) {
 		Name: CommandKey(strings.ToUpper(*cmdName)),
 		Args: args,
 	}, nil
+}
+
+func (c Command) EncodeRESP() resp.RESPValue {
+	return resputil.BulkStringsToRESPArray(append([]string{string(c.Name)}, c.Args...))
 }

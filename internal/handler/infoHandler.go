@@ -19,7 +19,7 @@ func infoHandler(c *client.Client, s *state.AppState, args []string) error {
 	}
 
 	isReplica, repID, repOffset := false, "", 0
-	s.ReadState(func(st state.State) {
+	s.ReadState(func(st state.ReplicaState) {
 		isReplica = st.IsReplica
 		repID = st.ReplicationID
 		repOffset = st.ReplicationOffset

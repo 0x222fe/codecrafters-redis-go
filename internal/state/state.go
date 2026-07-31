@@ -1,65 +1,36 @@
 package state
 
 import (
-	"context"
-	"fmt"
 	"sync"
 
 	"github.com/0x222fe/codecrafters-redis-go/internal/config"
-	"github.com/0x222fe/codecrafters-redis-go/internal/connection"
 	"github.com/0x222fe/codecrafters-redis-go/internal/store"
 	"github.com/0x222fe/codecrafters-redis-go/internal/user"
-	"github.com/0x222fe/codecrafters-redis-go/internal/utils/resputil"
 	"github.com/google/uuid"
 )
 
-const (
-	subChanBufSize = 16
-)
-
-type Replica struct {
-	Conn       *connection.Connection
-	Offset     int
-	OffsetChan chan int
-	Ctx        context.Context
-	Cancel     context.CancelFunc
-}
-
-type Subscriber struct {
-	Conn     *connection.Connection
-	Channels map[string]struct{}
-	MsgChan  chan PubSubMsg
-	Ctx      context.Context
-	Cancel   context.CancelFunc
-}
-
-type PubSubMsg struct {
-	Channel string
-	Payload []byte
-}
-
 type AppState struct {
-	mu          sync.RWMutex
-	cfg         *config.Config
-	store       *store.Store
-	replicas    map[uuid.UUID]*Replica
-	subscribers map[uuid.UUID]*Subscriber
-	channelSubs map[string]map[uuid.UUID]*Subscriber
-	users       map[string]*user.User
-	state       *State
+	mu           sync.RWMutex
+	cfg          *config.Config
+	store        *store.Store
+	replicaState *ReplicaState
+	replicas     map[uuid.UUID]*Replica
+	subscribers  map[uuid.UUID]*Subscriber
+	channelSubs  map[string]map[uuid.UUID]*Subscriber
+	users        map[string]*user.User
 }
 
-func NewAppState(s *State, cfg *config.Config, store *store.Store) *AppState {
+func NewAppState(s *ReplicaState, cfg *config.Config, store *store.Store) *AppState {
 	defaultUser := user.New(user.DefaultUserName)
 	defaultUser.AddFlag(user.FlagNoPass)
 
 	appState := &AppState{
-		cfg:         cfg,
-		store:       store,
-		state:       s,
-		replicas:    make(map[uuid.UUID]*Replica),
-		subscribers: make(map[uuid.UUID]*Subscriber),
-		channelSubs: make(map[string]map[uuid.UUID]*Subscriber),
+		cfg:          cfg,
+		store:        store,
+		replicaState: s,
+		replicas:     make(map[uuid.UUID]*Replica),
+		subscribers:  make(map[uuid.UUID]*Subscriber),
+		channelSubs:  make(map[string]map[uuid.UUID]*Subscriber),
 		users: map[string]*user.User{
 			user.DefaultUserName: defaultUser,
 		},
@@ -68,26 +39,18 @@ func NewAppState(s *State, cfg *config.Config, store *store.Store) *AppState {
 	return appState
 }
 
-type State struct {
-	IsReplica           bool
-	MasterReplicationID string
-	ReplicationID       string
-	ReplicationOffset   int
-}
-
-func (s *AppState) ReadState(f func(s State)) {
+func (s *AppState) ReadState(f func(s ReplicaState)) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	f(*s.state)
+	f(*s.replicaState)
 }
 
-func (s *AppState) WriteState(f func(s *State)) {
+func (s *AppState) WriteState(f func(s *ReplicaState)) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	f(s.state)
+	f(s.replicaState)
 }
 
-// SetStore should only be called during replication/master handshake
 func (s *AppState) SetStore(store *store.Store) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -104,173 +67,4 @@ func (s *AppState) ReadCfg() config.Config {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return *s.cfg
-}
-
-func (s *AppState) AddSubscriber(conn *connection.Connection, channel string) *Subscriber {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	sub, ok := s.subscribers[conn.ID]
-	if !ok {
-		ctx, cancel := context.WithCancel(context.Background())
-		sub = &Subscriber{
-			Conn:     conn,
-			Ctx:      ctx,
-			Channels: make(map[string]struct{}),
-			Cancel:   cancel,
-			MsgChan:  make(chan PubSubMsg, subChanBufSize),
-		}
-		s.subscribers[conn.ID] = sub
-		go func() {
-			for {
-				select {
-				case msg := <-sub.MsgChan:
-					conn.WriteResp(resputil.BulkStringsToRESPArray([]string{
-						"message",
-						msg.Channel,
-						string(msg.Payload),
-					}))
-				case <-sub.Ctx.Done():
-					return
-				}
-			}
-		}()
-	}
-	sub.Channels[channel] = struct{}{}
-
-	chanMap, ok := s.channelSubs[channel]
-	if !ok {
-		chanMap = make(map[uuid.UUID]*Subscriber)
-		s.channelSubs[channel] = chanMap
-	}
-
-	chanMap[conn.ID] = sub
-
-	fmt.Printf("Subscriber connected: %s\n", conn.RemoteAddr().String())
-
-	return sub
-}
-
-func (s *AppState) UnsubChannel(id uuid.UUID, channel string) *Subscriber {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	sub, ok := s.subscribers[id]
-	if !ok {
-		return nil
-	}
-
-	chanMap, ok := s.channelSubs[channel]
-	if !ok {
-		return sub
-	}
-
-	_, ok = chanMap[id]
-	if !ok {
-		return sub
-	}
-
-	delete(chanMap, id)
-	delete(sub.Channels, channel)
-
-	return sub
-}
-
-func (s *AppState) RemoveSubscriber(id uuid.UUID) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if sub, exists := s.subscribers[id]; exists {
-		sub.Cancel()
-
-		for channel := range sub.Channels {
-			delete(s.channelSubs[channel], id)
-		}
-
-		delete(s.subscribers, id)
-		fmt.Printf("Subscriber disconnected: %s\n", sub.Conn.RemoteAddr().String())
-	}
-}
-
-func (s *AppState) Publish(channel string, payload []byte) int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	sent := 0
-	chanMap, ok := s.channelSubs[channel]
-	if !ok {
-		return sent
-	}
-
-	for _, sub := range chanMap {
-		select {
-		case sub.MsgChan <- PubSubMsg{Channel: channel, Payload: payload}:
-			sent++
-		default:
-		}
-	}
-
-	return sent
-}
-
-func (s *AppState) AddReplica(conn *connection.Connection) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	s.replicas[conn.ID] = &Replica{
-		Conn:       conn,
-		Offset:     0,
-		OffsetChan: make(chan int, 1),
-		Ctx:        ctx,
-		Cancel:     cancel,
-	}
-	fmt.Printf("Replica connected: %s\n", conn.RemoteAddr().String())
-}
-
-func (s *AppState) RemoveReplica(id uuid.UUID) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if r, exists := s.replicas[id]; exists {
-		r.Cancel()
-
-		delete(s.replicas, id)
-		fmt.Printf("Replica disconnected: %s\n", r.Conn.RemoteAddr().String())
-	}
-}
-
-func (s *AppState) GetReplica(id uuid.UUID) (*Replica, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	replica, exists := s.replicas[id]
-	return replica, exists
-}
-
-func (s *AppState) GetReplicas() []*Replica {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	reps := make([]*Replica, 0, len(s.replicas))
-	for _, r := range s.replicas {
-		reps = append(reps, r)
-	}
-	return reps
-}
-
-func (s *AppState) GetUser(name string) (*user.User, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	user, exists := s.users[name]
-	return user, exists
-}
-
-func (s *AppState) AddUser(user *user.User) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.users[user.Name()] = user
 }

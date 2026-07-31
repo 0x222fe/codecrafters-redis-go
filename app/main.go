@@ -76,6 +76,13 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 		if err := os.MkdirAll(path, 0755); err != nil {
 			return nil, fmt.Errorf("create dir %s: %w", path, err)
 		}
+
+		file := filepath.Join(path, cfg.AppendFilename+".1.incr.aof")
+		f, err := os.OpenFile(file, os.O_CREATE, 0644)
+		if err != nil {
+			return nil, err
+		}
+		f.Close()
 	}
 
 	store := r.MapToStore()
@@ -83,7 +90,7 @@ func initRedis(cfg *config.Config) (*state.AppState, error) {
 	isReplica := cfg.MasterHost != "" && cfg.MasterPort != 0
 
 	state := state.NewAppState(
-		&state.State{
+		&state.ReplicaState{
 			IsReplica:           isReplica,
 			MasterReplicationID: "",
 			ReplicationID:       "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb", //INFO: hardcoded for now
@@ -125,20 +132,20 @@ func handleConnection(rawConn net.Conn, s *state.AppState) {
 				return
 			}
 
-			rawConn.Write(resp.NewError(err).Encode())
+			rawConn.Write(resp.NewError(err).Bytes())
 			continue
 		}
 
 		cmd, err := command.ParseCommandFromRESP(respVal)
 		if err != nil {
-			rawConn.Write(resp.NewError(err).Encode())
+			rawConn.Write(resp.NewError(err).Bytes())
 			continue
 		}
 		fmt.Printf("Received command: %s\n", cmd.Name)
 
 		err = handler.RunCommand(c, s, cmd)
 		if err != nil {
-			rawConn.Write(resp.NewError(err).Encode())
+			rawConn.Write(resp.NewError(err).Bytes())
 			continue
 		}
 	}
@@ -180,7 +187,7 @@ func serveMaster(appState *state.AppState, rawConn net.Conn, reader *bufio.Reade
 			continue
 		}
 
-		appState.WriteState(func(st *state.State) {
+		appState.WriteState(func(st *state.ReplicaState) {
 			st.ReplicationOffset += bytesRead
 		})
 	}
@@ -207,7 +214,7 @@ func initRepHandshake(appState *state.AppState) error {
 	reader := bufio.NewReader(conn)
 
 	pingCmd := resputil.BulkStringsToRESPArray([]string{"PING"})
-	_, err = conn.Write(pingCmd.Encode())
+	_, err = conn.Write(pingCmd.Bytes())
 	if err != nil {
 		return fmt.Errorf("failed to send PING command: %w", err)
 	}
@@ -221,7 +228,7 @@ func initRepHandshake(appState *state.AppState) error {
 	}
 
 	replconfRes := resputil.BulkStringsToRESPArray([]string{"REPLCONF", "listening-port", strconv.Itoa(cfg.Port)})
-	_, err = conn.Write(replconfRes.Encode())
+	_, err = conn.Write(replconfRes.Bytes())
 	if err != nil {
 		return fmt.Errorf("failed to send REPLCONF listening-port command: %w", err)
 	}
@@ -235,7 +242,7 @@ func initRepHandshake(appState *state.AppState) error {
 	}
 
 	replconfRes = resputil.BulkStringsToRESPArray([]string{"REPLCONF", "capa", "psync2"})
-	_, err = conn.Write(replconfRes.Encode())
+	_, err = conn.Write(replconfRes.Bytes())
 	if err != nil {
 		return fmt.Errorf("failed to send REPLCONF capa command: %w", err)
 	}
@@ -248,7 +255,7 @@ func initRepHandshake(appState *state.AppState) error {
 		return errors.New("unexpected response from master server, expected 'OK', got: " + val)
 	}
 
-	psyncEncoded := resputil.BulkStringsToRESPArray([]string{"PSYNC", "?", "-1"}).Encode()
+	psyncEncoded := resputil.BulkStringsToRESPArray([]string{"PSYNC", "?", "-1"}).Bytes()
 	_, err = conn.Write(psyncEncoded)
 	if err != nil {
 		return fmt.Errorf("failed to send PSYNC command: %w", err)
@@ -282,7 +289,7 @@ func initRepHandshake(appState *state.AppState) error {
 		return fmt.Errorf("invalid replication offset: %w", err)
 	}
 
-	appState.WriteState(func(s *state.State) {
+	appState.WriteState(func(s *state.ReplicaState) {
 		s.MasterReplicationID = masterRepID
 		s.ReplicationOffset = repOffset
 	})
