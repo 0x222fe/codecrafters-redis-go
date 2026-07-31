@@ -41,14 +41,11 @@ func xaddHandler(c *client.Client, s *state.AppState, args []string) error {
 		return err
 	}
 
+	s.GetStore().IterateStreamInsertHandlers(key, entry)
+
 	entryID := entry.ID.String()
 	res := resp.NewBulkString(&entryID)
 	writeResponse(c, res)
-
-	go func() {
-		store := s.GetStore()
-		store.IterateStreamInsertHandlers(key, entry)
-	}()
 
 	return nil
 }
